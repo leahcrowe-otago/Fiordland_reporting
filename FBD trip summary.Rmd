@@ -19,27 +19,29 @@ data<-read.csv('./data/Doubtful2019_05.csv', header = T, stringsAsFactors = F)
 ##TRACKS##
 track_files<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = T)
 track_filenames<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = F)
-track_filenames<-str_replace(track_filenames,'.gpx','')
+track_filenames<-stringr::str_replace(track_filenames,'.gpx','')
 tracks<-sapply(track_files, function (x) rgdal::readOGR(x,"tracks"))
 names(tracks)<-track_filenames
 
 tracks<-do.call(rbind, tracks)
-
-tracks%>%
-  as.data.frame()
-fortify(tracks)
-library(mapview)
-mapview(tracks)
-
+dates<-substr(tracks$datestamp,1,10)
 library(ggplot2)
 
-NZ <- getData(country="New Zealand", level=1)
+NZ <- raster::getData(country="New Zealand", level=1)
 
-ggplot()+
+effort_map<-ggplot()+
   geom_polygon(NZ, mapping = aes(long,lat,group = group))+
   geom_path(tracks, mapping = aes(long,lat,group = group, color = group))+
-  coord_sf(xlim = c(166.8,167.6), ylim = c(-45.6,-45.1), crs = 4269)
+  coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)+
+  theme_bw()+
+  scale_color_viridis_d(name = "Date",labels = dates)
+
+ggsave(filename = 'effort_map.png',effort_map,device = 'png', './figures', dpi = 320)# width = 169, height = 60, units = "mm", dpi = 320)
   
+```
+
+```{r effort_map, , echo=FALSE, warning=FALSE, message=FALSE,out.width="100%",fig.align='left'}
+knitr::include_graphics("./figures/effort_map.png")
 ```
 
 
