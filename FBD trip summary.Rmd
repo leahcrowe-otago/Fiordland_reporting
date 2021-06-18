@@ -12,9 +12,8 @@ year<-2021
 YYYY_MM<-'2021_05'
 
 fullpath<-paste0(path,year,"/",YYYY_MM,"/")
-
-##Photo data##
-data<-read.csv('./data/Doubtful2019_05.csv', header = T, stringsAsFactors = F)
+```
+```{r tracks, include=FALSE}
 
 ##TRACKS##
 track_files<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = T)
@@ -38,6 +37,44 @@ effort_map<-ggplot()+
 
 ggsave(filename = 'effort_map.png',effort_map,device = 'png', './figures', dpi = 320)# width = 169, height = 60, units = "mm", dpi = 320)
   
+```
+```{r PA include= FALSE}
+
+##Photo data##
+data<-read.csv('./data/2021_05_Indbyday.csv', header = T, stringsAsFactors = F)
+lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
+
+photo_counts<-data%>%
+  mutate(NAME = str_replace(NAME, "JOLLY", "JOLLY-GOOD"))%>%
+  group_by(Date, NAME)%>%
+  tally()
+
+daily_cap<-photo_counts%>%
+  mutate_if(is.numeric, ~1 * (. > 0))%>%
+  left_join(lifehist, by = "NAME")%>%
+  filter(NAME != "" & !grepl('_',NAME) & !grepl('CULL',NAME) & NAME != "UNMA" & !str_detect(NAME, "^UK") & !str_detect(NAME, "\\?"))%>%
+  tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR"), names_from = "Date", values_from = "n")%>%
+  arrange(NAME)%>%
+  mutate(AgeClass = case_when(
+    year - FIRST_YEAR > 3 ~ "A",
+    year - BIRTH_YEAR == 0 ~ "C",
+    !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR >= 0 ~ "J",
+    TRUE ~ "U"
+  ))
+
+trip_cap<-daily_cap%>%
+  distinct(NAME,SEX,AgeClass)
+
+sex_prop<-trip_cap%>%
+  group_by(SEX)%>%
+  tally()%>%
+  mutate(Proportion = round(n/sum(n),2))
+
+age_prop<-trip_cap%>%
+  group_by(AgeClass)%>%
+  tally()%>%
+  mutate(Proportion = round(n/sum(n),2))
+
 ```
 
 ```{r effort_map, , echo=FALSE, warning=FALSE, message=FALSE,out.width="100%",fig.align='left'}
