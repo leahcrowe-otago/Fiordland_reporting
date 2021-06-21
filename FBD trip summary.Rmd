@@ -7,7 +7,7 @@ geometry: left=5cm,right=5cm,top=1cm,bottom=3cm
 
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 
-library(rgdal);library(dplyr);library(ggplot2)
+library(rgdal);library(dplyr);library(ggplot2);library(ggplot2);library(sf);library(tidyverse)
 
 year<-2021
 YYYY_MM<-'2021_05'
@@ -32,12 +32,9 @@ fullpath<-paste0(path,year,"/",YYYY_MM,"/")
 
 ##TRACKS##
 track_files<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = T)
-#track_filenames<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = F)
-#track_filenames<-stringr::str_replace(track_filenames,'.gpx','')
 tracks<-lapply(track_files, function (x) sf::st_read(x, layer = "track_points", quiet = TRUE))
 tracks<-do.call(rbind, tracks)
 
-library(tidyverse)
 #convert meters to nm
   m_nm<-1/1852
   
@@ -69,7 +66,6 @@ data.table::setDT(sig)[,  START_LON := data.table::setDT(tracks_df)[sig, long, o
 
 ```
 ```{r map, echo=FALSE, warning=FALSE, message=FALSE, out.width="100%"}
-library(ggplot2);library(sf)
 
 NZ <- raster::getData(country="New Zealand", level=1)
 
@@ -112,16 +108,6 @@ daily_cap<-photo_counts%>%
 
 trip_cap<-daily_cap%>%
   distinct(NAME,SEX,AgeClass)
-
-# sex_prop<-trip_cap%>%
-#   group_by(SEX)%>%
-#   tally()%>%
-#   mutate(Proportion = round(n/sum(n),2))
-# 
-# age_prop<-trip_cap%>%
-#   group_by(AgeClass)%>%
-#   tally()%>%
-#   mutate(Proportion = round(n/sum(n),2))
 
 age_sex_table<-trip_cap%>%
   dplyr::select(-NAME)%>%
@@ -190,8 +176,6 @@ unseen_table<-unseen_two_years%>%
     AgeClass == 'J' ~ "Juvenile",
     AgeClass == 'C' ~ "Calf*"
   ))
-
-
 
 ```
 \vspace*{-5mm}
