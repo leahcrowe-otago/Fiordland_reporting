@@ -1,44 +1,92 @@
 ---
 title: "Fiordland Bottlenose Dolphin Monitoring"
 output: pdf_document
+graphics: yes
+geometry: left=5cm,right=5cm,top=1cm,bottom=3cm
 ---
 
-```{r setup, include=FALSE}
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 
 library(rgdal);library(dplyr);library(ggplot2)
 
-path<-"//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/Doubtful Sound Dolphin Monitoring/"
 year<-2021
 YYYY_MM<-'2021_05'
+loc_base<-"Doubtful Sound/Deep Cove"
+tripdate_s<-"24"
+tripdate_e<-"28 May 2021"
+team<-c("Dave Johnson, DOC","David Johnston, University of Otago","Leah Crowe, University of Otago")
+vessel<-"Nemo"
+known_calves<-c("Mako (Whitetip)", "Shivers (Scratchy)", "Sux (Five)", "Vortex (Spiral)", "Yule (Glob)")
+new_calves<-"One new calf sighted, but more sightings are needed to confirm the mom (possibly Gerbil or Dart)"
+pop_est<-"2019: 68 (95% CI = 67–69)"
+
+wx_comments<-"Conditions were really nice over this period with only one day called early due to incoming bad weather."
+calf_comments<-"The new calf added this trip is distinct from the other known calves, and was associated with both Gerbil (unknown sex) and Dart (a female previously misidentified as a male)."
+nextsteps_comments<-" "
+
+path<-"//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/Doubtful Sound Dolphin Monitoring/"
 
 fullpath<-paste0(path,year,"/",YYYY_MM,"/")
 ```
-```{r tracks, include=FALSE}
+```{r tracks, echo=FALSE, warning=FALSE, message=FALSE}
 
 ##TRACKS##
 track_files<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = T)
-track_filenames<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = F)
-track_filenames<-stringr::str_replace(track_filenames,'.gpx','')
-tracks<-sapply(track_files, function (x) rgdal::readOGR(x,"tracks"))
-names(tracks)<-track_filenames
-
+#track_filenames<-list.files(paste0(fullpath,'Tracks'), pattern = "*.gpx", full.names = F)
+#track_filenames<-stringr::str_replace(track_filenames,'.gpx','')
+tracks<-lapply(track_files, function (x) sf::st_read(x, layer = "track_points", quiet = TRUE))
 tracks<-do.call(rbind, tracks)
-dates<-substr(tracks$datestamp,1,10)
-library(ggplot2)
+
+library(tidyverse)
+#convert meters to nm
+  m_nm<-1/1852
+  
+tracks_df<-tracks%>%
+  mutate(time = lubridate::ymd_hms(time),
+         date = as.factor(as.Date(time)),
+         lat = unlist(map(tracks$geometry,2)),
+         long = unlist(map(tracks$geometry,1)))%>%
+  dplyr::select(date,track_seg_point_id,time,lat,long)%>%
+  filter(!(lat < -45.465 & long > 167.162))%>%
+  group_by(date)%>%
+  mutate(lat2 = dplyr::lag(lat),
+         long2 = dplyr::lag(long),
+         dist_km = geosphere::distVincentyEllipsoid(matrix(c(long,lat), ncol = 2),matrix(c(long2, lat2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)%>%
+  as.data.frame()
+
+```
+```{r sightings, echo=FALSE, warning=FALSE, message=FALSE}
+
+sig<-read.csv('./data/FBD_sightings.csv', header = T, stringsAsFactors = F)
+sig$START_TIME<-lubridate::ymd_hms(sig$START_TIME)
+sig$END_TIME<-lubridate::ymd_hms(sig$END_TIME)
+
+sig<-sig%>%
+  mutate(time_wTt = END_TIME - START_TIME)
+
+data.table::setDT(sig)[,  START_LAT := data.table::setDT(tracks_df)[sig, lat, on = c("time" = "START_TIME"), roll = "nearest"]]
+data.table::setDT(sig)[,  START_LON := data.table::setDT(tracks_df)[sig, long, on = c("time" = "START_TIME"), roll = "nearest"]]
+
+```
+```{r map, echo=FALSE, warning=FALSE, message=FALSE, out.width="100%"}
+library(ggplot2);library(sf)
 
 NZ <- raster::getData(country="New Zealand", level=1)
 
-effort_map<-ggplot()+
-  geom_polygon(NZ, mapping = aes(long,lat,group = group))+
-  geom_path(tracks, mapping = aes(long,lat,group = group, color = group))+
+map<-ggplot()+
+  geom_polygon(NZ, mapping = aes(long,lat,group = group), alpha = 0.8)+
+  geom_path(tracks_df, mapping = aes(long,lat,group = date, color = date))+
+  geom_point(sig, mapping = aes(START_LON, START_LAT, color = SIGHTING_DATE), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
   coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)+
   theme_bw()+
-  scale_color_viridis_d(name = "Date",labels = dates)
+  scale_color_viridis_d(name = "Date")+
+  xlab("Longitude")+
+  ylab("Latitude")
 
-ggsave(filename = 'effort_map.png',effort_map,device = 'png', './figures', dpi = 320)# width = 169, height = 60, units = "mm", dpi = 320)
-  
+ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 180, units = 'mm')
+
 ```
-```{r PA include= FALSE}
+```{r PA, echo=FALSE, warning=FALSE, message=FALSE }
 
 ##Photo data##
 data<-read.csv('./data/2021_05_Indbyday.csv', header = T, stringsAsFactors = F)
@@ -65,20 +113,153 @@ daily_cap<-photo_counts%>%
 trip_cap<-daily_cap%>%
   distinct(NAME,SEX,AgeClass)
 
-sex_prop<-trip_cap%>%
-  group_by(SEX)%>%
-  tally()%>%
-  mutate(Proportion = round(n/sum(n),2))
+# sex_prop<-trip_cap%>%
+#   group_by(SEX)%>%
+#   tally()%>%
+#   mutate(Proportion = round(n/sum(n),2))
+# 
+# age_prop<-trip_cap%>%
+#   group_by(AgeClass)%>%
+#   tally()%>%
+#   mutate(Proportion = round(n/sum(n),2))
 
-age_prop<-trip_cap%>%
-  group_by(AgeClass)%>%
+age_sex_table<-trip_cap%>%
+  dplyr::select(-NAME)%>%
+  group_by(SEX, AgeClass)%>%
   tally()%>%
-  mutate(Proportion = round(n/sum(n),2))
+  pivot_wider(names_from = SEX, values_from = n)%>%
+  arrange(factor(AgeClass, levels = c("A","J","C")))%>%
+  replace(is.na(.), 0)%>%
+  mutate(AgeClass = case_when(
+    AgeClass == 'A' ~ "Adult",
+    AgeClass == 'J' ~ "Juvenile",
+    AgeClass == 'C' ~ "Calf*"
+  ))
 
 ```
+```{r excel_cap_hist, echo=FALSE, warning=FALSE, message=FALSE }
+#this section is a place holder until the database is complete
+##Capture history from Excel spreadsheet##
+caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)
 
-```{r effort_map, , echo=FALSE, warning=FALSE, message=FALSE,out.width="100%",fig.align='left'}
-knitr::include_graphics("./figures/effort_map.png")
+May2021<-daily_cap%>%
+  dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass)%>%
+  pivot_longer(!(c(NAME)),names_to = "Date")%>%
+  mutate(Date = lubridate::dmy(Date))%>%
+  filter(value != 0)
+
+all_first_last<-caphist%>%
+  pivot_longer(!(c(Entry,Name)),names_to = "Date")%>%
+  filter(value != 0)%>%
+  mutate(Date = lubridate::dmy(substr(str_replace_all(Date,"\\.","-"),2,9)),
+         NAME = toupper(Name))%>%
+  dplyr::select(NAME, Date, value)%>%
+  bind_rows(May2021)%>%
+  group_by(NAME)%>%
+  mutate(first_date = min(Date),
+         last_date = max(Date))%>%
+  distinct(NAME,first_date,last_date)%>%
+  filter(!is.na(NAME))%>%
+  arrange(NAME)%>%
+  left_join(lifehist, by = "NAME")%>%
+  mutate(AgeClass = case_when(
+    year - FIRST_YEAR > 3 ~ "A",
+    year - BIRTH_YEAR == 0 ~ "C",
+    !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR >= 0 ~ "J",
+    TRUE ~ "U"
+  ))
+
+all_first_last%>%filter(is.na(SEX))
+all_first_last$DEATH_YEAR<-as.numeric(all_first_last$DEATH_YEAR)
+
+unseen_two_years<-all_first_last%>%
+  filter(is.na(DEATH_YEAR))%>%
+  filter(last_date < min(as.Date(tracks_df$time)) & last_date >= min(as.Date(tracks_df$time)) - lubridate::years(2))%>%
+  mutate(LAST_YEAR = lubridate::year(last_date))
+
+unseen_two_years%>%
+  group_by(LAST_YEAR, SEX, AgeClass)%>%
+  tally()%>%
+  pivot_wider(names_from = SEX, values_from = n)%>%
+  arrange(factor(AgeClass, levels = c("A","J","C")))%>%
+  replace(is.na(.), 0)%>%
+  mutate(AgeClass = case_when(
+    AgeClass == 'A' ~ "Adult",
+    AgeClass == 'J' ~ "Juvenile",
+    AgeClass == 'C' ~ "Calf*"
+  ))
+
+```
+\vspace*{-5mm}
+Trip location and base: \hfill `r loc_base`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Trip dates: \hfill `r tripdate_s` – `r tripdate_e`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Research team: 
+\vspace*{-9mm} \begin{flushright} 
+`r team[1]`\\  
+`r team[2]`\\ 
+`r team[3]`\end{flushright}
+\vspace*{-4mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Vessel: \hfill `r vessel`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Survey days: \hfill `r nrow(tracks_df%>%distinct(date))`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Effort (nautical miles): \hfill `r round(sum(tracks_df$dist_km, na.rm=TRUE),1)`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Group encounter days: \hfill `r nrow(sig%>%distinct(SIGHTING_DATE))`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Number of sightings: \hfill `r nrow(sig)`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Total time with dolphins (hours): \hfill `r round(as.numeric(sum(sig$time_wTt))/60,1)`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Number of dolphins sighted: \hfill `r nrow(daily_cap)`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Recent population abundance estimate: \hfill `r pop_est`
+\vspace*{-8mm}
+```{r effort_map, echo=FALSE, fig.align='center', out.width='100%'}
+knitr::include_graphics("./figures/map.png")
+```
+\vspace*{-10mm}
+Fig. 1. Dolphin sighting location are indicated by the red diamonds, and included: `r do.call("paste", c(as.list(unique(sig$LOCATION)), sep = ", "))`
+
+\newpage
+\vspace*{5mm}
+\vspace*{-5mm}
+
+```{r tables, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr); library(kableExtra)
+
+knitr::kable(age_sex_table, "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
+   kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
+   add_header_above(c(" " = 1, "Sex" = 3), escape = F)
 ```
 
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+*Known calves sighted (mom): `r known_calves`
+
+New calves sighted: `r new_calves`
+
+\setlength{\parindent}{0in}
+\setlength{\leftskip}{0in}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+### Comments:
+`r wx_comments`
+
+`r calf_comments`
+
+`r nextsteps_comments`
 
