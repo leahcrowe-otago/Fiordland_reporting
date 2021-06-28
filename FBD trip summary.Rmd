@@ -10,19 +10,19 @@ geometry: left=5cm,right=5cm,top=1cm,bottom=3cm
 library(rgdal);library(dplyr);library(ggplot2);library(ggplot2);library(sf);library(tidyverse)
 
 year<-2021
-YYYY_MM<-'2021_05'
+YYYY_MM<-'2021_01'
 loc_base<-"Doubtful Sound/Deep Cove"
-tripdate_s<-"24"
-tripdate_e<-"28 May 2021"
-team<-c("Dave Johnson, DOC","David Johnston, University of Otago","Leah Crowe, University of Otago")
+tripdate_s<-"25"
+tripdate_e<-"29 Jan 2021"
+team<-c("Dave Johnson, DOC","Anja Köhler, DOC","Max Harvey, University of Otago")
 vessel<-"Nemo"
-known_calves<-c("Mako (Whitetip)", "Shivers (Scratchy)", "Sux (Five)", "Vortex (Spiral)", "Yule (Glob)")
-new_calves<-"One new calf sighted, but more sightings are needed to confirm the mom (possibly Gerbil or Dart)"
+known_calves<-c()
+new_calves<-c("Mako (Whitetip)", "Shivers (Scratchy)", "Sux (Five)", "Vortex (Spiral)", "Yule (Glob)")
 pop_est<-"2019: 68 (95% CI = 67–69)"
 
-wx_comments<-"Conditions were really nice over this period with only one day called early due to incoming bad weather."
-calf_comments<-"The new calf added this trip is distinct from the other known calves, and was associated with both Gerbil (unknown sex) and Dart (a female previously misidentified as a male)."
-nextsteps_comments<-" "
+wx_comments<-""
+calf_comments<-"The timing of the Doubtful Sound summer trip was adjusted this year to attempt to better fit with the peak calving time of bottlenose dolphins. Potentially five new calves were observed this season, the largest number of new calves since 2016. All mothers of newborns have had previous calves which have survived to >3 years old. A new individual was also ID’d in the population approximately 1 year old, observed swimming with Bafta. This is the second time this individual was observed with Bafta, potentially indicating Bafta is a new mother from the 2019/2020 breeding season."
+nextsteps_comments<-"Unfortunately dolphins were only sighted on two days during this survey. It is therefore necessary to confirm if the new calves identified are correct and assigned to the correct mother during the winter trip – if they survive."
 
 path<-"//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/Doubtful Sound Dolphin Monitoring/"
 
@@ -121,6 +121,37 @@ age_sex_table<-trip_cap%>%
     AgeClass == 'J' ~ "Juvenile",
     AgeClass == 'C' ~ "Calf*"
   ))
+
+disco<-function(x){
+  freqcap<-x%>%
+    dplyr::select(-NAME, -SEX, -BIRTH_YEAR,-FIRST_YEAR,-AgeClass)%>%
+    as.data.frame()
+  freqcap[is.na(freqcap)] <- 0 
+  desc<-Rcapture::descriptive(freqcap)
+  desc.df<-as.data.frame(desc$base.freq, row.names = FALSE)
+  desc.df<-desc.df%>%
+    mutate(date = lubridate::dmy(names(freqcap)))%>%
+    mutate(survey = lubridate::yday(date),
+           disc = cumsum(ui),
+           order = 1:nrow(desc.df),
+           year = lubridate::year(date))
+  desc.df$survey<-as.factor(desc.df$survey)
+  desc.df$disc<-as.numeric(desc.df$disc)
+  
+  desc.df
+}
+
+disco_data<-disco(daily_cap)
+
+ggplot(disco_data, aes(x=date, y = disc))+
+  geom_col(mapping = aes(x = date, y = ni), alpha = 0.5)+
+  geom_point(alpha = 0.5, size = 3)+
+  geom_line()+
+  theme_bw()+
+  scale_colour_viridis_d(option = "plasma", name = '')+
+  xlab("Cumulative effort by day")+
+  ylab("Number of identified individuals")+
+  ylim(c(0,max(disco_data$disc)))
 
 ```
 ```{r excel_cap_hist, echo=FALSE, warning=FALSE, message=FALSE }
