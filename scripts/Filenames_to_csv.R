@@ -6,7 +6,7 @@ YYYY_MM<-'2021_01'
 
 fullpath<-paste0(path,year,"/",YYYY_MM,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
-filenames<-sapply(folder.list, function (x) list.files(paste0(fullpath, x), pattern = "*.JPG", full.names = T, recursive = T))
+filenames<-sapply(folder.list, function (x) list.files(paste0(fullpath, x), pattern = c("*.jpg","*.JPG"), full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
 length(filenames_unlist)
 
