@@ -12,7 +12,7 @@ length(filenames_unlist)
 
 metadata<-exifr::read_exif(filenames_unlist, tags = c("filename", "DateTimeOriginal"))
 ############
-
+##this finds ands
 and<-metadata%>%
   mutate(FileName = str_replace(FileName, "with","and"))%>%
   filter(grepl(' and ',FileName))%>%
