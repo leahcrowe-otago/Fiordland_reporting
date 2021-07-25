@@ -10,6 +10,10 @@ natpark<-subset(protected_areas, (section == "s.4 - National Park"))
 mpa<-subset(protected_areas, (section == "s.3 - Marine Reserve"))
 #conarea<-subset(protected_areas, (grepl("s.25", section) | grepl("s.20", section)))
 WHS<-readOGR("./shapefiles", layer = "WDPA_WDOECM_Jul2021_Public_26652_shp-polygons")
+bathy<-readOGR("./shapefiles", layer = "NZBathy_2016_contours")
+
+alliso200<-sp::spTransform(subset(bathy, ELEVATION == -200), CRS.latlon)
+alliso1000<-sp::spTransform(subset(bathy, ELEVATION == -1000), CRS.latlon)
 
 base<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.9, fill = "white")+
@@ -30,19 +34,27 @@ NZ<-base+
   theme_void()
 
 TeWah_labels<-data.frame(label = c("Rakiura-Stewart\nIsland", "Ata Whenua-Fiordland\nNational Park"),
-                         lat = c(-47.1, -45.3),
-                         lon = c(167.8, 167.3))
+                         lat = c(-47.0, -45.3),
+                         lon = c(168.0, 167.3))
 
-TeWah_fill = c("Marine Reserve" = "orange", "Te Wāhipounamu" = "forestgreen")
+TeWah_points<-data.frame(label = c("Taipaririki-Deep Cove","Motup\u14dhue-Bluff","\u14ctepoti-Dunedin"),
+                         lat = c(-45.456, -46.597, -45.880),
+                         lon = c(167.155, 168.330, 170.501))
+
+TeWah_fill = c("Marine Reserve" = "orange", "Te Wahipounamu" = "forestgreen")
 TeWah_color = c("National Park" = "darkgreen")
 
 TeWah<-base+
-  geom_polypath(WHS, mapping = aes(long,lat,group = group, fill = "Te Wāhipounamu"), alpha = 0.5)+
+  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.2)+
+  geom_polypath(WHS, mapping = aes(long,lat,group = group, fill = "Te Wahipounamu"), alpha = 0.5)+
   geom_polypath(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
   geom_path(natpark, mapping = aes(long,lat,group = group, color = "National Park"), alpha = 1, fill = NA, size = 0.1)+
   geom_polypath(big_lakes, mapping = aes(long,lat,group = group), alpha = 0.6, fill = "blue")+
+  geom_point(TeWah_points, mapping = aes(lon, lat), size = 0.5, color = "black", shape = 21)+
   coord_sf(xlim = c(166,171), ylim = c(-47.25,-43), crs = 4269)+
-  geom_text_repel(data = TeWah_labels, aes(x = lon, y = lat, label = label), size = 2, min.segment.length = 0, nudge_y = c(0.25,0.65), nudge_x = c(-1,-2))+
+  geom_text_repel(data = TeWah_labels, aes(x = lon, y = lat, label = label), size = 2, min.segment.length = 0, nudge_y = c(0.15,0.65), nudge_x = c(1,-1.9))+
+  geom_text_repel(data = TeWah_points, aes(x = lon, y = lat, label = label), size = 1.75, min.segment.length = 0.5, nudge_y = c(-0.25,0.09,-0.04), nudge_x = c(1,0.5,-0.5))+
   scale_fill_manual(values = TeWah_fill)+
   scale_color_manual(values = TeWah_color)+
   theme(legend.position = c(0.83, 0.08),
@@ -52,7 +64,9 @@ TeWah<-base+
         legend.text = element_text(size = 5),
         legend.spacing.y = unit(-0.02, "cm"),
         legend.box.background = element_rect(color = "white",fill = "white"),
-        legend.key = element_rect(fill = NA))
+        legend.key = element_rect(fill = NA),
+        axis.text = element_text(size = 6),
+        axis.title = element_text(size = 6))
 
 TeWahNZ<-cowplot::ggdraw() +
   cowplot::draw_plot(TeWah) +
@@ -61,10 +75,10 @@ TeWahNZ<-cowplot::ggdraw() +
 ggsave("./figures/TeWahNZ.svg", TeWahNZ, dpi = 320, width = 250, units = 'mm')
 
 
-fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound","Te Hāpua-Sutherland Sound",
-                                   "Hāwea-Bligh Sound","Te Houhou-George Sound","Taitetimu-Caswell Sound",
-                                   "Taiporoporo-Charles Sound","Hinenui-Nancy Sound","Te Awa-o-Tū-Thompson Sound",
-                                   "Patea-Doubtful Sound","Te Rā-Dagg Sound",
+fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound","Te H\u101pua-Sutherland Sound",
+                                   "H\u101wea-Bligh Sound","Te Houhou-George Sound","Taitetimu-Caswell Sound",
+                                   "Taiporoporo-Charles Sound","Hinenui-Nancy Sound","Te Awa-o-T\u16b-Thompson Sound",
+                                   "Patea-Doubtful Sound","Te R\u101-Dagg Sound",
                                    "Te Puaitaha-Breaksea\nSound","Tamatea-Dusky\nSound","Taiari-Chalky Inlet",
                                    "Rakituma-Preservation Inlet", "Vancouver\nArm"),
                          lat = c(-45.51, -44.58, -44.72,
@@ -83,6 +97,8 @@ fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound",
 fiord_fill = c("Marine Reserve" = "orange")
 
 fiords<-base+
+  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.2)+
   geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
   geom_polypath(big_lakes, mapping = aes(long,lat,group = group), alpha = 0.6, fill = "blue")+
   coord_sf(xlim = c(166.0,168), ylim = c(-46.2,-44.5), crs = 4269)+
@@ -94,19 +110,21 @@ fiords<-base+
         legend.text = element_text(size = 5),
         legend.spacing.y = unit(-0.02, "cm"),
         legend.box.background = element_rect(color = "white",fill = "white"),
-        legend.key = element_rect(fill = NA))+
-  geom_text_repel(data = fiord_labels, aes(x = lon, y = lat, label = label), size = 2, min.segment.length = 0, force_pull = 2, box.padding = 0.1,
+        legend.key = element_rect(fill = NA),
+        axis.text = element_text(size = 6),
+        axis.title = element_text(size = 6))+
+  geom_text_repel(data = fiord_labels, aes(x = lon, y = lat, label = label), size = 1.75, min.segment.length = 0, force_pull = 2, box.padding = 0.1,
                   nudge_x = c(0.29,-0.3,-0.4,
                               -0.3,-0.5,-0.4,
-                              -0.5,-0.5,-2,
+                              -0.5,-0.5,-1.5,
                               -0.3,-0.2,
                               -0.4,-0.3,-0.3,
-                              -0.4,0.23),
+                              -0.30,0.23),
                   nudge_y = c(-0.05,0.01,0.04,
                               0.1,0.05,0.1,
                               0.08,0.05,0.01,
                               0,0,
-                              0.08,-0.02,-0.02,
+                              0.08,-0.02,-0.04,
                               -0.15,-0.09))
   
 ggsave("./figures/fiords.svg", fiords, dpi = 320, width = 250, units = 'mm')
