@@ -12,6 +12,7 @@ mpa<-subset(protected_areas, (section == "s.3 - Marine Reserve"))
 WHS<-readOGR("./shapefiles", layer = "WDPA_WDOECM_Jul2021_Public_26652_shp-polygons")
 bathy<-readOGR("./shapefiles", layer = "NZBathy_2016_contours")
 
+alliso50<-sp::spTransform(subset(bathy, ELEVATION == -50), CRS.latlon)
 alliso200<-sp::spTransform(subset(bathy, ELEVATION == -200), CRS.latlon)
 alliso1000<-sp::spTransform(subset(bathy, ELEVATION == -1000), CRS.latlon)
 
@@ -45,10 +46,10 @@ TeWah_fill = c("Marine Reserve" = "orange", "Te Wahipounamu" = "forestgreen")
 TeWah_color = c("National Park" = "darkgreen")
 
 TeWah<-base+
+  geom_polypath(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
   geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
   geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.2)+
   geom_polypath(WHS, mapping = aes(long,lat,group = group, fill = "Te Wahipounamu"), alpha = 0.5)+
-  geom_polypath(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
   geom_path(natpark, mapping = aes(long,lat,group = group, color = "National Park"), alpha = 1, fill = NA, size = 0.1)+
   geom_polypath(big_lakes, mapping = aes(long,lat,group = group), alpha = 0.6, fill = "blue")+
   geom_point(TeWah_points, mapping = aes(lon, lat), size = 0.5, color = "black", shape = 21)+
@@ -97,9 +98,9 @@ fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound",
 fiord_fill = c("Marine Reserve" = "orange")
 
 fiords<-base+
+  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
   geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
   geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.2)+
-  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
   geom_polypath(big_lakes, mapping = aes(long,lat,group = group), alpha = 0.6, fill = "blue")+
   coord_sf(xlim = c(166.0,168), ylim = c(-46.2,-44.5), crs = 4269)+
   scale_fill_manual(values = fiord_fill)+
@@ -129,3 +130,48 @@ fiords<-base+
   
 ggsave("./figures/fiords.svg", fiords, dpi = 320, width = 250, units = 'mm')
 
+ST<-data.frame(lat = c(-46.035,-46.08,-45.395,-45.105,-45.1), lon = c(166.54,166.67,166.82,167.03,167.14), type = c("SoundTrap","SoundTrap","T/FPOD","T/FPOD","T/FPOD"))
+ 
+type_color = c("SoundTrap" = "red","T/FPOD" = "purple")
+
+chalk_pres<-base+
+  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso50, mapping = aes(long,lat,group = group), color = "black", alpha = 0.9, size = 0.2)+
+  scale_fill_manual(values = fiord_fill)+
+  theme(legend.position = c(0.83, 0.12),
+        legend.title = element_blank(),
+        legend.margin = margin(c(1, 1, 1, 1)),
+        legend.key.size = unit(0.2, 'cm'),
+        legend.text = element_text(size = 5),
+        legend.spacing.y = unit(-0.02, "cm"),
+        legend.box.background = element_rect(color = "white",fill = "white"),
+        legend.key = element_rect(fill = NA),
+        axis.text = element_text(size = 6),
+        axis.title = element_text(size = 6))+
+  coord_sf(xlim = c(166.45,166.95), ylim = c(-46.18,-45.85), crs = 4269)+
+  geom_point(ST, mapping = aes(x = lon, y = lat, color = type), alpha = 0.8)+
+  scale_color_manual(values = type_color)
+
+midfiord<-base+
+  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso50, mapping = aes(long,lat,group = group), color = "black", alpha = 0.9, size = 0.2)+
+  scale_fill_manual(values = fiord_fill)+
+  theme(legend.position = c(0.83, 0.12),
+    legend.title = element_blank(),
+    legend.margin = margin(c(1, 1, 1, 1)),
+    legend.key.size = unit(0.2, 'cm'),
+    legend.text = element_text(size = 5),
+    legend.spacing.y = unit(-0.02, "cm"),
+    legend.box.background = element_rect(color = "white",fill = "white"),
+    legend.key = element_rect(fill = NA),
+    axis.text = element_text(size = 6),
+    axis.title = element_text(size = 6))+
+  coord_sf(xlim = c(166.7,167.3), ylim = c(-45.02,-45.46), crs = 4269)+
+  geom_point(ST, mapping = aes(x = lon, y = lat, color = type), alpha = 0.8)+
+  scale_color_manual(values = type_color)
+
+deploy<-ggpubr::ggarrange(chalk_pres,midfiord, common.legend = T, legend = "bottom", labels = "AUTO", ncol = 2)
+
+ggsave("./figures/deploy.svg", deploy, dpi = 320, width = 250, units = 'mm')
