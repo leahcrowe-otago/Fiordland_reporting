@@ -1,0 +1,113 @@
+---
+title: "Fiordland Bottlenose Dolphin Monitoring"
+output: pdf_document
+graphics: yes
+geometry: left=5cm,right=5cm,top=1cm,bottom=3cm
+params:
+  tripdate_s: NA 
+  tripdate_e: NA
+  loc_base: NA 
+  # nsurveydays: NA 
+  vessel: NA 
+  crew: NA
+  pop_est: NA
+  track_dist: NA 
+  sig_days: NA 
+  sig_count: NA 
+  hours_wTt: NA 
+  wx_comments: NA 
+  calf_comments: NA 
+  next_comments: NA
+---
+\vspace*{-5mm}
+Trip location and base: \hfill `r loc_base`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Trip dates: \hfill `r tripdate_s` – `r tripdate_e`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Research team: 
+\vspace*{-9mm} \begin{flushright} 
+`r crew`
+<!-- `r team[1]`\\   -->
+<!-- `r team[2]`\\  -->
+<!-- `r team[3]` -->
+\end{flushright}
+\vspace*{-4mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Vessel: \hfill `r vessel`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Survey days: \hfill 0
+<!-- `r nsurveydays` -->
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Effort (nautical miles): \hfill `r track_dist`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Group encounter days: \hfill `r nrow(sig_days)`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Number of sightings: \hfill `r sig_count`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Total time with dolphins (hours): \hfill `r hours_wTt$total_wTt`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Number of dolphins sighted: \hfill `r nrow(uniqueID)`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Recent population abundance estimate: \hfill `r pop_est$popsent`
+\vspace*{-8mm}
+```{r effort_map, echo=FALSE, fig.align='center', out.width='100%'}
+knitr::include_graphics("./figures/map.png")
+```
+\vspace*{-10mm}
+Fig. 1. Dolphin sighting locations are indicated by the red diamonds. 
+\newpage
+\vspace*{5mm}
+\vspace*{-5mm}
+
+```{r sig_table, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr); library(kableExtra)
+
+# knitr::kable(age_sex_table, "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
+#    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
+#    add_header_above(c(" " = 1, "Sex" = 3), escape = F)
+```
+
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\setlength{\parskip}{8pt}
+<!-- *Known calves sighted (mom): `r known_calves` -->
+
+<!-- New calves sighted: `r new_calves` -->
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr); library(kableExtra)
+
+# recent<-(max(as.Date(tracks_df$time)) - lubridate::years(1))
+# recent<-format(recent, format = '%d %B %Y')
+# older<-(max(as.Date(tracks_df$time)) - lubridate::years(2))
+# older<-format(older, format = '%d %B %Y')
+# 
+# knitr::kable(unseen_table, "latex", booktabs = T, linesep = "", escape = F, 
+#              caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
+#    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
+#    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
+```
+
+\setlength{\parindent}{0in}
+\setlength{\leftskip}{0in}
+
+<!-- The `r nrow(unseen_two_years)` individuals in the above table include: `r stringi::stri_replace_last(do.call("paste", c(as.list(unique(unseen_two_years$NameSex)), sep = ", ")), fixed = ",", ", and")`  -->
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+### Comments:
+`r wx_comments`
+
+`r calf_comments`
+
+`r next_comments`
+
