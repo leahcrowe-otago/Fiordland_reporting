@@ -5,23 +5,24 @@ fluidPage(
     sidebarPanel(
       radioButtons("filepathway", "File Pathway", choices = c("Network", "Local"), selected = "Network", inline = FALSE), 
       textInput("filepathinput", (HTML(paste("Local pathway for photo analysis spreadsheet", '<br/>', "Example: C:/Users/leah.crowe/Desktop/Canada Data Processing/")))),
-      radioButtons("areainput", "Area monitored", choices = c("Doubtful", "Dusky","Milford","Other"), selected = "Doubtful", inline = FALSE), 
-      #radioButtons("tzone", "Camera Time Zone", choices = c("Atlantic Time","Eastern Time"), selected = "Eastern Time", inline = FALSE),
       textInput("photoyear","Year (YYYY)"),
       textInput("photomonth","Month (MM)"),
-      textInput("photofile", "Filename (must be a csv, but do not enter the extension)"),
-      #textInput("permit", "Permit Number", placeholder = "MMPA #####"),
-      actionButton("photogo", "Get positions")
+      radioButtons("locbase","Location base", choices = c("Deep Cove","Anchor Island","Southern Winds"), selected = "Deep Cove", inline = FALSE),
+      radioButtons("areainput", "Area monitored", choices = c("Doubtful","Dusky","Milford","Other"), selected = "Doubtful", inline = FALSE), 
+      radioButtons("vessel","Vessel", choices = c("Nemo","Mark Kearney","Steve Gooding"), selected = "Nemo", inline = FALSE),
+      uiOutput("crew"),
+      radioButtons("EXIF", "collect EXIF data, or load file?", choices = c("collect","load"), selected = "load", inline = FALSE),
+      actionButton("photogo", "Go")
     ),
     mainPanel(
-      (HTML(paste('<br/>',
-                  "CSV must include these columns:",'<br/>',
-                  '<br/>',
-                  "Filename, Date, ID_Name, Part, Notes, Photographer, Catalogue_update"))),
+      textAreaInput("wx_comments","Weather comments:", "General comments on the weather during this trip (i.e. it was mostly nice, it was mostly bad, we could not work for 4 days, etc.)", height = 100, width = 500), 
+      textAreaInput("calf_comments","Calf comments:", "Highlight new calves observed in this trip", height = 100, width = 500),
+      textAreaInput("next_comments","Next step comments:", "Recommendations for the future generated from the experiences this trip", height = 100, width = 500),
       br(),
-      textOutput("finalmess"),
+      downloadButton("report", "Generate Report"),
+      #textOutput("finalmess"),
       br(),
-      leafletOutput("finalleaf")
+      #leafletOutput("finalleaf")
     )
   )
 )
