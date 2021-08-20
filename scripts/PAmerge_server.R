@@ -1,10 +1,13 @@
-crew<-read.csv('./data/FBD_crew.csv')%>%mutate(creworg = paste0(FIRST,' ',LAST,', ',ORGANIZATION))
-crew_list<-crew$creworg
+disable("report")
+crew.csv<-read.csv('./data/FBD_crew.csv')%>%mutate(creworg = paste0(FIRST,' ',LAST,', ',ORGANIZATION))
+crew_list<-crew.csv$creworg
 output$crew<-renderUI({
-  pickerInput("crew","Crew", choices = c(crew_list), multiple = T)
+  pickerInput("crew","Crew", choices = c(crew_list), multiple = T, inline = F)
 })
 
 observeEvent(input$photogo,{
+  
+  withProgress(message = 'Processing data and compiling report...', value = 0, {
   
   output$finalmess<-renderText({""})
   
@@ -38,7 +41,13 @@ observeEvent(input$photogo,{
   ####################
   ## Photo analysis ##
   ####################
-  if (input$EXIF == "collect"){  
+  
+  if (dir.exists(pathimage) == FALSE){
+    output$error<-renderText({"Double check 'Year', 'Month', and 'Area monitored' -- files cannot be found."})
+  } else {
+    output$error<-renderText({""})
+    
+   if (input$EXIF == "collect"){  
     print("merging PA")
   ##merge all PA excel spreadsheets
   PA_xlsx<-list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T)
@@ -74,7 +83,7 @@ observeEvent(input$photogo,{
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
     distinct(fullfilename)%>%
     filter(!is.na(fullfilename))
-
+  incProgress(1/5)
   print("getting exif data")
   #get exif data
   metadata<-exifr::read_exif(files_for_exif$fullfilename, tags = c("filename", "DateTimeOriginal"))
@@ -89,17 +98,179 @@ observeEvent(input$photogo,{
     left_join(metadata2, by = c("Filename", "Date"))
   
   write.csv(allmerge_dt, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
-  
+  incProgress(2/5)
   } else if (input$EXIF == "load"){
-  
+    incProgress(2/5)
+    print("load exif")
     allmerge_dt<-read.csv(paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = T)
+  
+    }
+  
+  tripdate_s<-format(min(as.Date(f_data$DATE)), "%d %b %Y")
+  tripdate_e<-format(max(as.Date(f_data$DATE)), "%d %b %Y")
+  recent<-format(min(as.Date(f_data$DATE)) - lubridate::years(1), "%d %b %Y")
+  older<-format(min(as.Date(f_data$DATE)) - lubridate::years(2), "%d %b %Y")
+  
+  ##################
+  ## life history ##
+  ##################
+  
+  lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
+
+  photo_counts<-allmerge_dt%>%
+    filter(!grepl("\\?",ID_Name))%>%
+    filter(ID_Name != "CALF")%>%
+    mutate(ID_Name = stringr::str_replace(ID_Name, "JOLLY", "JOLLY-GOOD"),
+           ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
+                               TRUE ~ ID_Name))%>%
+    group_by(Date, ID_Name)%>%
+    tally()
+  
+  daily_cap<-photo_counts%>%
+    mutate_if(is.numeric, ~1 * (. > 0))%>%
+    left_join(lifehist, by = c("ID_Name" = "NAME"))%>%
+    dplyr::rename("NAME" = "ID_Name")%>%
+    filter(NAME != "" & !grepl('_',NAME) & !grepl('CULL',NAME) & NAME != "UNMA" & !str_detect(NAME, "^UK") & !str_detect(NAME, "\\?"))%>%
+    tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR"), names_from = "Date", values_from = "n")%>%
+    arrange(NAME)%>%
+    mutate(AgeClass = case_when(
+      year - FIRST_YEAR > 3 ~ 'A',
+      year - BIRTH_YEAR == 0 ~ 'C',
+      !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR >= 0 ~ 'J',
+      TRUE ~ 'U'
+    ))
+  
+  trip_cap<-daily_cap%>%
+    distinct(NAME,SEX,AgeClass)
+  
+  uniqueID<-nrow(trip_cap)
+  
+  age_sex_table<-trip_cap%>%
+    dplyr::select(-NAME)%>%
+    group_by(SEX, AgeClass)%>%
+    tally()%>%
+    tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
+    arrange(factor(AgeClass, levels = c("A","J","C","U")))%>%
+    replace(is.na(.), 0)%>%
+    mutate(AgeClass = case_when(
+      AgeClass == 'A' ~ "Adult",
+      AgeClass == 'J' ~ "Juvenile",
+      AgeClass == 'C' ~ "Calf*"
+    ))
+  
+  if (!"M" %in% colnames(age_sex_table)){
+    age_sex_table<-age_sex_table%>%
+      mutate(M = 0)}
+  
+  if (!"F" %in% colnames(age_sex_table)){
+    age_sex_table<-age_sex_table%>%
+      mutate(F = 0)}
+  
+  if (!"X" %in% colnames(age_sex_table)){
+    age_sex_table<-age_sex_table%>%
+      mutate(X = 0)}
+  
+  disco<-function(x){
+    
+    freqcap<-x%>%
+      dplyr::select(-NAME, -SEX, -BIRTH_YEAR,-FIRST_YEAR,-AgeClass)%>%
+      as.data.frame()
+    freqcap[is.na(freqcap)] <- 0 
+    desc<-Rcapture::descriptive(freqcap)
+    desc.df<-as.data.frame(desc$base.freq, row.names = FALSE)
+    desc.df<-desc.df%>%
+      mutate(date = lubridate::ymd(names(freqcap)))%>%
+      mutate(survey = lubridate::yday(date),
+             disc = cumsum(ui),
+             order = 1:nrow(desc.df),
+             year = lubridate::year(date))
+    desc.df$survey<-as.factor(desc.df$survey)
+    desc.df$disc<-as.numeric(desc.df$disc)
+    
+    desc.df
   }
   
-  uniqueID<-allmerge_dt%>%distinct(ID_Name)%>%filter(!grepl("\\?",ID_Name))
+  disco_data<-disco(daily_cap)
   
-  pop_est<-read.csv('./data/FBD_popest.csv', header = T)%>%
-    filter(Year == max(Year))%>%
-    mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"–",ucl,")"))
+  disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
+    geom_col(mapping = aes(x = date, y = ni), alpha = 0.5)+
+    geom_point(alpha = 0.5, size = 3)+
+    geom_line()+
+    theme_bw()+
+    scale_colour_viridis_d(option = "plasma", name = '')+
+    xlab("")+
+    ylab("individuals per day and cumulative")+
+    ylim(c(0,max(disco_data$disc)))
+  
+  ggsave(filename = 'disco_curve.png',disco_curve,device = 'png', './figures', dpi = 320, width = 120, height = 80, units = 'mm')
+  
+  #######################
+  ## Sightings history ##
+  #######################
+  
+  #this section is a place holder until the database is complete
+  ##Capture history from Excel spreadsheet##
+  caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
+  
+  thistrip<-daily_cap%>%
+    dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass)%>%
+    tidyr::pivot_longer(!(c(NAME)),names_to = "Date")%>%
+    mutate(Date = lubridate::ymd(Date))%>%
+    filter(value != 0)
+  
+  all_first_last<-caphist%>%
+    tidyr::pivot_longer(!(c(Entry,NAME)),names_to = "Date")%>%
+    filter(value != 0)%>%
+    mutate(Date = lubridate::dmy(substr(str_replace_all(Date,"\\.","-"),2,9)))%>%
+    dplyr::select(NAME, Date, value)%>%
+    bind_rows(thistrip)%>%
+    group_by(NAME)%>%
+    mutate(first_date = min(Date),
+           last_date = max(Date))%>%
+    distinct(NAME,first_date,last_date)%>%
+    filter(!is.na(NAME))%>%
+    arrange(NAME)%>%
+    left_join(lifehist, by = "NAME")%>%
+    mutate(AgeClass = case_when(
+      year - FIRST_YEAR > 3 ~ "A",
+      year - BIRTH_YEAR == 0 ~ "C",
+      !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR >= 0 ~ "J",
+      TRUE ~ "U"
+    ))
+  
+  all_first_last$DEATH_YEAR<-as.numeric(all_first_last$DEATH_YEAR)
+  
+  unseen_two_years<-all_first_last%>%
+    filter(is.na(DEATH_YEAR))%>%
+    filter(last_date < max(as.Date(f_data$DATE)) - lubridate::years(1) & last_date >= max(as.Date(f_data$DATE)) - lubridate::years(2))%>%
+    mutate(LAST_YEAR = lubridate::year(last_date))%>%
+    mutate(NameSex = case_when(
+      nchar(NAME) > 2 ~ paste0(str_to_title(NAME)," (",SEX,")"),
+      nchar(NAME) <= 2 ~ paste0(NAME," (",SEX,")")))
+  
+  unseen_table<-unseen_two_years%>%
+    group_by(LAST_YEAR, SEX, AgeClass)%>%
+    tally()%>%
+    tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
+    arrange(factor(AgeClass, levels = c("A","J","C")))%>%
+    replace(is.na(.), 0)%>%
+    mutate(AgeClass = case_when(
+      AgeClass == 'A' ~ "Adult",
+      AgeClass == 'J' ~ "Juvenile",
+      AgeClass == 'C' ~ "Calf*"
+    ))
+  
+  if (!"M" %in% colnames(unseen_table)){
+    unseen_table<-unseen_table%>%
+      mutate(M = 0)}
+  
+  if (!"F" %in% colnames(unseen_table)){
+    unseen_table<-unseen_table%>%
+      mutate(F = 0)}
+  
+  if (!"X" %in% colnames(unseen_table)){
+    unseen_table<-unseen_table%>%
+      mutate(X = 0)}
   
   ##########################
   ## Sightings and tracks ##
@@ -134,19 +305,18 @@ observeEvent(input$photogo,{
   sig_num<-f_data%>%
     filter(Home.screen == "Encounter END & DATA" | Home.screen == "Encounter START")%>%
     mutate(signum = rep(1:(n()/2), each = 2))%>%
-    dplyr::select(Datetime, DATE, signum)
+    dplyr::select(Datetime, DATE, signum, Home.screen)
   
   f_data<-f_data%>%
-    left_join(sig_num, by = c("Datetime", "DATE"))%>%
-    filter(Home.screen == "Encounter END & DATA" | Home.screen == "Encounter START")
-  
-  sig_count<-max(f_data$signum)
+    left_join(sig_num, by = c("Datetime", "DATE","Home.screen"))
+
+  sig_count<-max(f_data$signum, na.rm = T)
   
   sig_days<-sig_num%>%
     distinct(DATE)
   
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
-  
+  incProgress(3/5)
   #convert meters to nm
   m_nm<-1/1852
   
@@ -158,7 +328,7 @@ observeEvent(input$photogo,{
   
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
   
-hours_wTt<-f_data%>%
+hours_wTt<-sig_num%>%
     dplyr::select(signum, Datetime, Home.screen)%>%
     tidyr::pivot_wider(names_from = Home.screen, values_from = Datetime)%>%
     mutate(time_wTt = `Encounter END & DATA` - `Encounter START`)%>%
@@ -169,7 +339,7 @@ hours_wTt<-f_data%>%
   #########
   
   NZ_coast<-readOGR("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
-  
+incProgress(4/5)
   map<-ggplot()+
     geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
     geom_path(f_data, mapping = aes(LON, LAT, group = DATE, color = DATE))+
@@ -192,42 +362,45 @@ hours_wTt<-f_data%>%
       coord_sf(xlim = c(min(f_data$LON),max(f_data$LON)), ylim = c(min(f_data$LAT),max(f_data$LAT)), crs = 4269)
   }
   
-  ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 180, units = 'mm')
-  
+  ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 120, units = 'mm')
+  incProgress(5/5)
  print("Done")
- 
+ enable("report")
+
  output$report<-downloadHandler(
    
-   filename = paste0(pathimage,"/FBD_monitoring_report_",phyear,"_",phmonth,".pdf"),
+   filename = paste0("FBD_monitoring_report_",phyear,"_",phmonth,".pdf"),
    
    content = function(file) {
      
-      tempReport<-file.path("./scripts/FBD trip summary.Rmd")
-      file.copy("FBD trip summary.Rmd", tempReport, overwrite = FALSE)
+      tempReport<-file.path("./scripts/FBD summary template.Rmd")
+      file.copy("FBD summary template.Rmd", tempReport, overwrite = FALSE)
  
-      tripdate_s<-min(as.Date(f_data$DATE))
-      tripdate_e<-max(as.Date(f_data$DATE))
       loc_base<-paste0(pharea,"/",input$locbase)
-      #nsurveydays<-nrow(f_data%>%distinct(DATE))
+      nsurveydays<-nrow(f_data%>%distinct(DATE))
       vessel<-input$vessel
-      crew<-input$crew
+      crew<-stringr::str_c(input$crew, "\\linebreak", collapse = " ")
       wx_comments<-input$wx_comments
       calf_comments<-input$calf_comments
       next_comments<-input$next_comments
       
-      #print(nsurveydays)
+      pop_est<-read.csv('./data/FBD_popest.csv', header = T)%>%
+        filter(Year == max(Year))%>%
+        mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
+      
       
       params<-list( tripdate_s =  tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
-                    #nsurveydays = nsurveydays, 
-                    vessel = vessel, crew = crew, pop_est = pop_est,
+                    nsurveydays = nsurveydays, recent = recent, older = older, 
+                    vessel = vessel, crew = crew, pop_est = pop_est, uniqueID = uniqueID,
                     track_dist = track_dist, sig_days = sig_days, sig_count = sig_count, hours_wTt = hours_wTt, 
+                    age_sex_table = age_sex_table, unseen_table = unseen_table,
                     wx_comments = wx_comments, calf_comments = calf_comments, next_comments = next_comments)
       print(params)
       rmarkdown::render(tempReport, output_file = file,
                    params = params,
                    envir = new.env(parent = globalenv()))
    })
- 
- 
+  }
+  })
 })
   
