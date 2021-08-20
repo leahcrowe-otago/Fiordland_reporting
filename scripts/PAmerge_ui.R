@@ -7,12 +7,14 @@ fluidPage(
       textInput("filepathinput", (HTML(paste("Local pathway for photo analysis spreadsheet", '<br/>', "Example: C:/Users/leah.crowe/Desktop/Canada Data Processing/")))),
       textInput("photoyear","Year (YYYY)"),
       textInput("photomonth","Month (MM)"),
-      radioButtons("locbase","Location base", choices = c("Deep Cove","Anchor Island","Southern Winds"), selected = "Deep Cove", inline = FALSE),
       radioButtons("areainput", "Area monitored", choices = c("Doubtful","Dusky","Milford","Other"), selected = "Doubtful", inline = FALSE), 
+      radioButtons("locbase","Location base", choices = c("Deep Cove","Anchor Island","Southern Winds"), selected = "Deep Cove", inline = FALSE),
       radioButtons("vessel","Vessel", choices = c("Nemo","Mark Kearney","Steve Gooding"), selected = "Nemo", inline = FALSE),
       uiOutput("crew"),
       radioButtons("EXIF", "collect EXIF data, or load file?", choices = c("collect","load"), selected = "load", inline = FALSE),
-      actionButton("photogo", "Go")
+      actionButton("photogo", "Go"),
+      br(),
+      textOutput("error")
     ),
     mainPanel(
       textAreaInput("wx_comments","Weather comments:", "General comments on the weather during this trip (i.e. it was mostly nice, it was mostly bad, we could not work for 4 days, etc.)", height = 100, width = 500), 
