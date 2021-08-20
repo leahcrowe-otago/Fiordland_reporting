@@ -11,7 +11,7 @@ params:
   vessel: NA 
   crew: NA
   pop_est: NA
-  uniqueID: NA
+  trip_cap: NA
   track_dist: NA 
   sig_days: NA 
   sig_count: NA 
@@ -58,7 +58,7 @@ Number of sightings: \hfill `r params$sig_count`
 Total time with dolphins (hours): \hfill `r params$hours_wTt$total_wTt`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
-Number of dolphins sighted: \hfill `r nrow(params$uniqueID)`
+Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Recent population abundance estimate: \hfill `r params$pop_est$popsent`
