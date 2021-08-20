@@ -38,6 +38,7 @@ observeEvent(input$photogo,{
   
   pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
   print(pathimage)
+
   ####################
   ## Photo analysis ##
   ####################
@@ -142,8 +143,6 @@ observeEvent(input$photogo,{
   
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
-  
-  uniqueID<-nrow(trip_cap)
   
   age_sex_table<-trip_cap%>%
     dplyr::select(-NAME)%>%
@@ -380,6 +379,9 @@ incProgress(4/5)
       nsurveydays<-nrow(f_data%>%distinct(DATE))
       vessel<-input$vessel
       crew<-stringr::str_c(input$crew, "\\linebreak", collapse = " ")
+      print(crew)
+      crew<-substr(crew,1,nchar(crew)-10)
+      print(crew)
       wx_comments<-input$wx_comments
       calf_comments<-input$calf_comments
       next_comments<-input$next_comments
@@ -391,7 +393,7 @@ incProgress(4/5)
       
       params<-list( tripdate_s =  tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
                     nsurveydays = nsurveydays, recent = recent, older = older, 
-                    vessel = vessel, crew = crew, pop_est = pop_est, uniqueID = uniqueID,
+                    vessel = vessel, crew = crew, pop_est = pop_est, trip_cap = trip_cap,
                     track_dist = track_dist, sig_days = sig_days, sig_count = sig_count, hours_wTt = hours_wTt, 
                     age_sex_table = age_sex_table, unseen_table = unseen_table,
                     wx_comments = wx_comments, calf_comments = calf_comments, next_comments = next_comments)
