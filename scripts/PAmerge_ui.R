@@ -19,7 +19,7 @@ fluidPage(
     mainPanel(
       textAreaInput("wx_comments","Weather comments:", "General comments on the weather during this trip (i.e. it was mostly nice, it was mostly bad, we could not work for 4 days, etc.)", height = 100, width = 500), 
       textAreaInput("calf_comments","Calf comments:", "Highlight new calves observed in this trip", height = 100, width = 500),
-      textAreaInput("next_comments","Next step comments:", "Recommendations for the future generated from the experiences this trip", height = 100, width = 500),
+      textAreaInput("next_comments","Next step comments:", "Recommendations for the future generated from the experiences of this trip", height = 100, width = 500),
       br(),
       downloadButton("report", "Generate Report"),
       #textOutput("finalmess"),
