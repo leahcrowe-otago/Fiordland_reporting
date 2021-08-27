@@ -96,7 +96,10 @@ observeEvent(input$photogo,{
     dplyr::select(Filename, Datetime, Date)
   
   allmerge_dt<-allmerge%>%
-    left_join(metadata2, by = c("Filename", "Date"))
+    left_join(metadata2, by = c("Filename", "Date"))%>%
+    mutate(ID_Name = stringr::str_replace(ID_Name, "JOLLY", "JOLLY-GOOD"),
+           ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
+                               TRUE ~ ID_Name))
   
   write.csv(allmerge_dt, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   incProgress(2/5)
@@ -104,7 +107,8 @@ observeEvent(input$photogo,{
     incProgress(2/5)
     print("load exif")
     allmerge_dt<-read.csv(paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = T)
-  
+    allmerge_dt$Datetime<-ymd_hms(allmerge_dt$Datetime)
+    allmerge_dt$Date<-dmy(allmerge_dt$Date)
     }
   
   tripdate_s<-format(min(as.Date(f_data$DATE)), "%d %b %Y")
@@ -121,9 +125,6 @@ observeEvent(input$photogo,{
   photo_counts<-allmerge_dt%>%
     filter(!grepl("\\?",ID_Name))%>%
     filter(ID_Name != "CALF")%>%
-    mutate(ID_Name = stringr::str_replace(ID_Name, "JOLLY", "JOLLY-GOOD"),
-           ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
-                               TRUE ~ ID_Name))%>%
     group_by(Date, ID_Name)%>%
     tally()
   
@@ -139,7 +140,8 @@ observeEvent(input$photogo,{
       year - BIRTH_YEAR == 0 ~ 'C',
       !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR >= 0 ~ 'J',
       TRUE ~ 'U'
-    ))
+    ))%>%
+    mutate(SEX=replace(SEX, is.na(SEX), 'X'))
   
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
@@ -198,7 +200,7 @@ observeEvent(input$photogo,{
     theme_bw()+
     scale_colour_viridis_d(option = "plasma", name = '')+
     xlab("")+
-    ylab("individuals per day and cumulative")+
+    ylab("Individuals per day & cumulative IDs")+
     ylim(c(0,max(disco_data$disc)))
   
   ggsave(filename = 'disco_curve.png',disco_curve,device = 'png', './figures', dpi = 320, width = 120, height = 80, units = 'mm')
@@ -270,6 +272,8 @@ observeEvent(input$photogo,{
   if (!"X" %in% colnames(unseen_table)){
     unseen_table<-unseen_table%>%
       mutate(X = 0)}
+  
+  print(unseen_table)
   
   ##########################
   ## Sightings and tracks ##
@@ -379,9 +383,7 @@ incProgress(4/5)
       nsurveydays<-nrow(f_data%>%distinct(DATE))
       vessel<-input$vessel
       crew<-stringr::str_c(input$crew, "\\linebreak", collapse = " ")
-      print(crew)
       crew<-substr(crew,1,nchar(crew)-10)
-      print(crew)
       wx_comments<-input$wx_comments
       calf_comments<-input$calf_comments
       next_comments<-input$next_comments
