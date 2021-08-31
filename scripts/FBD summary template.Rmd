@@ -72,6 +72,16 @@ Fig. 1. Survey tracks and dolphin sighting locations (indicated by the red diamo
 \vspace*{5mm}
 \vspace*{-5mm}
 
+```{r disco, echo=FALSE, fig.align='center', out.width='100%'}
+knitr::include_graphics("./figures/disco_curve.png")
+```
+\vspace*{-10mm}
+Fig. 2. Number of animals sighted on each survey day (vertical bars), and the discovery curve of new individuals identified over the survey period (black circles and lines). 
+
+\setlength{\parindent}{0in}
+\setlength{\leftskip}{0in}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 ```{r demo_table, echo=FALSE, warning=FALSE, message=FALSE}
 
 knitr::kable(age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
@@ -79,13 +89,7 @@ knitr::kable(age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs
   add_header_above(c(" " = 1, "Sex" = 3), escape = F)
 
 ```
-
-```{r disco, echo=FALSE, fig.align='center', out.width='100%'}
-knitr::include_graphics("./figures/disco_curve.png")
-```
-
-Fig. 2. Number of animals sighted on each survey day, and the discovery curve of new individuals identified over the survey period. 
-
+\vspace*{-5mm}
 ```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
 
 knitr::kable(unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
@@ -93,14 +97,14 @@ knitr::kable(unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex"
    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
 ```
 
-\setlength{\parindent}{-0.2in}
-\setlength{\leftskip}{0.2in}
-\setlength{\parskip}{8pt}
+<!-- \setlength{\parindent}{-0.2in} -->
+<!-- \setlength{\leftskip}{0.2in} -->
+<!-- \setlength{\parskip}{8pt} -->
 <!-- *Known calves sighted (mom): `r known_calves` -->
 
 <!-- New calves sighted: `r new_calves` -->
 
-\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+<!-- \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm} -->
 
 \setlength{\parindent}{0in}
 \setlength{\leftskip}{0in}
