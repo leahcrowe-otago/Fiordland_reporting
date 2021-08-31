@@ -112,7 +112,9 @@ observeEvent(input$photogo,{
     }
   
   tripdate_s<-format(min(as.Date(f_data$DATE)), "%d %b %Y")
+  print(tripdate_s)
   tripdate_e<-format(max(as.Date(f_data$DATE)), "%d %b %Y")
+  tripdate_e<-'15 Jul 2021'
   recent<-format(min(as.Date(f_data$DATE)) - lubridate::years(1), "%d %b %Y")
   older<-format(min(as.Date(f_data$DATE)) - lubridate::years(2), "%d %b %Y")
   
@@ -390,6 +392,7 @@ incProgress(4/5)
       
       pop_est<-read.csv('./data/FBD_popest.csv', header = T)%>%
         filter(Year == max(Year))%>%
+        filter(Sound == pharea)%>%
         mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
       
       
