@@ -113,7 +113,7 @@ knitr::kable(unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex"
 ### Comments:
 `r params$wx_comments`
 
-`r params$calf_comments`
+*`r params$calf_comments`
 
 `r params$next_comments`
 
