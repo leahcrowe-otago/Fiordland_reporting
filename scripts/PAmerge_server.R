@@ -111,10 +111,10 @@ observeEvent(input$photogo,{
     allmerge_dt$Date<-dmy(allmerge_dt$Date)
     }
   
-  tripdate_s<-format(min(as.Date(f_data$DATE)), "%d %b %Y")
-  print(tripdate_s)
-  tripdate_e<-format(max(as.Date(f_data$DATE)), "%d %b %Y")
-  tripdate_e<-'15 Jul 2021'
+  tripdate_s_dt<-format(min(as.Date(f_data$DATE)), "%d %b %Y")
+  tripdate_e_dt<-format(max(as.Date(f_data$DATE)), "%d %b %Y")
+  output$tripdate_s_dt_o<-renderText({tripdate_s_dt})
+  output$tripdate_e_dt_o<-renderText({tripdate_e_dt})
   recent<-format(min(as.Date(f_data$DATE)) - lubridate::years(1), "%d %b %Y")
   older<-format(min(as.Date(f_data$DATE)) - lubridate::years(2), "%d %b %Y")
   
@@ -381,6 +381,8 @@ incProgress(4/5)
       tempReport<-file.path("./scripts/FBD summary template.Rmd")
       file.copy("FBD summary template.Rmd", tempReport, overwrite = FALSE)
  
+      tripdate_s<-format(input$tripdate_s, "%d %b %Y")
+      tripdate_e<-format(input$tripdate_e, "%d %b %Y")
       loc_base<-paste0(pharea,"/",input$locbase)
       nsurveydays<-nrow(f_data%>%distinct(DATE))
       vessel<-input$vessel
@@ -396,7 +398,7 @@ incProgress(4/5)
         mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
       
       
-      params<-list( tripdate_s =  tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
+      params<-list( tripdate_s = tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
                     nsurveydays = nsurveydays, recent = recent, older = older, 
                     vessel = vessel, crew = crew, pop_est = pop_est, trip_cap = trip_cap,
                     track_dist = track_dist, sig_days = sig_days, sig_count = sig_count, hours_wTt = hours_wTt, 
