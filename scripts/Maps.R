@@ -130,9 +130,9 @@ fiords<-base+
   
 ggsave("./figures/fiords.svg", fiords, dpi = 320, width = 250, units = 'mm')
 
-ST<-data.frame(lat = c(-46.035,-46.08,-45.395,-45.105,-45.1), lon = c(166.54,166.67,166.82,167.03,167.14), type = c("SoundTrap","SoundTrap","T/FPOD","T/FPOD","T/FPOD"))
+ST<-data.frame(lat = c(-46.035,-46.08,-45.395,-45.395,-45.105,-45.1), lon = c(166.54,166.67,166.815,166.825,167.03,167.14), type = c("SoundTrap","SoundTrap","SoundTrap","FPOD","FPOD","FPOD"))
  
-type_color = c("SoundTrap" = "red","T/FPOD" = "purple")
+type_color = c("SoundTrap" = "red","FPOD" = "purple")
 
 chalk_pres<-base+
   geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
@@ -143,12 +143,12 @@ chalk_pres<-base+
         legend.title = element_blank(),
         legend.margin = margin(c(1, 1, 1, 1)),
         legend.key.size = unit(0.2, 'cm'),
-        legend.text = element_text(size = 5),
+        legend.text = element_text(size = 8),
         legend.spacing.y = unit(-0.02, "cm"),
         legend.box.background = element_rect(color = "white",fill = "white"),
         legend.key = element_rect(fill = NA),
-        axis.text = element_text(size = 6),
-        axis.title = element_text(size = 6))+
+        axis.text = element_text(size = 7),
+        axis.title = element_text(size = 7))+
   coord_sf(xlim = c(166.45,166.95), ylim = c(-46.18,-45.85), crs = 4269)+
   geom_point(ST, mapping = aes(x = lon, y = lat, color = type), alpha = 0.8)+
   scale_color_manual(values = type_color)
@@ -162,16 +162,17 @@ midfiord<-base+
     legend.title = element_blank(),
     legend.margin = margin(c(1, 1, 1, 1)),
     legend.key.size = unit(0.2, 'cm'),
-    legend.text = element_text(size = 5),
+    legend.text = element_text(size = 8),
     legend.spacing.y = unit(-0.02, "cm"),
     legend.box.background = element_rect(color = "white",fill = "white"),
     legend.key = element_rect(fill = NA),
-    axis.text = element_text(size = 6),
-    axis.title = element_text(size = 6))+
+    axis.text = element_text(size = 7),
+    axis.title = element_text(size = 7))+
   coord_sf(xlim = c(166.7,167.3), ylim = c(-45.02,-45.46), crs = 4269)+
   geom_point(ST, mapping = aes(x = lon, y = lat, color = type), alpha = 0.8)+
   scale_color_manual(values = type_color)
 
-deploy<-ggpubr::ggarrange(chalk_pres,midfiord, common.legend = T, legend = "bottom", labels = "AUTO", ncol = 2)
+deploy<-ggpubr::ggarrange(chalk_pres,midfiord, common.legend = T, legend = "bottom", labels = "AUTO", ncol = 1)
 
-ggsave("./figures/deploy.svg", deploy, dpi = 320, width = 250, units = 'mm')
+ggsave("./figures/deploy_DOC.svg", deploy, dpi = 320, width = 250, units = 'mm')
+ggsave("./figures/deploy_DOC.png", deploy, dpi = 320, height = 150, units = 'mm')
