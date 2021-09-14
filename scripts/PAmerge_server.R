@@ -24,9 +24,9 @@ observeEvent(input$photogo,{
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
   } else {
-    #pharea = "Dusky"
+    #pharea = "Doubtful"
     #phyear = 2021
-    #phmonth = '07'
+    #phmonth = '05'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -68,8 +68,8 @@ observeEvent(input$photogo,{
   filenames_unlist<-unlist(filenames, use.names = F)
 
   allphotod_df<-data.frame(fullfilename = filenames_unlist,
-             filename = stringr::str_sub(filenames_unlist,-12,-5),
-             date = ymd(substr(filenames_unlist,150, 157)))
+             filename = basename(filenames_unlist),
+             date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
   
   PA_fn_error<-allphotod_df%>%
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
@@ -81,6 +81,7 @@ observeEvent(input$photogo,{
   }
   
   files_for_exif<-allphotod_df%>%
+    mutate(filename = stringr::str_sub(filename, end = -5))%>%
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
     distinct(fullfilename)%>%
     filter(!is.na(fullfilename))
@@ -88,9 +89,10 @@ observeEvent(input$photogo,{
   print("getting exif data")
   #get exif data
   metadata<-exifr::read_exif(files_for_exif$fullfilename, tags = c("filename", "DateTimeOriginal"))
+  print(metadata)
   ##
   metadata2<-metadata%>%
-    mutate(Filename = substr(FileName, 1, 8),
+    mutate(Filename = stringr::str_sub(basename(FileName), end = -5),
            Datetime = ymd_hms(DateTimeOriginal),
            Date = as.Date(Datetime))%>%
     dplyr::select(Filename, Datetime, Date)
@@ -99,10 +101,13 @@ observeEvent(input$photogo,{
     left_join(metadata2, by = c("Filename", "Date"))%>%
     mutate(ID_Name = stringr::str_replace(ID_Name, "JOLLY", "JOLLY-GOOD"),
            ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
-                               TRUE ~ ID_Name))
-  
+                               TRUE ~ ID_Name),
+           Survey_Area = toupper(pharea))
+
   write.csv(allmerge_dt, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
+  
   incProgress(2/5)
+  
   } else if (input$EXIF == "load"){
     incProgress(2/5)
     print("load exif")
