@@ -8,7 +8,7 @@ CRS.latlon<-CRS("+proj=longlat +datum=WGS84 +no_defs")
 protected_areas<-sp::spTransform(protected_areas, CRS.latlon)
 natpark<-subset(protected_areas, (section == "s.4 - National Park"))
 mpa<-subset(protected_areas, (section == "s.3 - Marine Reserve"))
-#conarea<-subset(protected_areas, (grepl("s.25", section) | grepl("s.20", section)))
+
 WHS<-readOGR("./shapefiles", layer = "WDPA_WDOECM_Jul2021_Public_26652_shp-polygons")
 bathy<-readOGR("./shapefiles", layer = "NZBathy_2016_contours")
 
