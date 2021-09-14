@@ -14,10 +14,6 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem(icon = icon("camera"),"PA merge", tabName = "PAmerge")
-      #menuItem(icon = icon("calendar"),"Trigger Analysis", tabName = "DMA"),
-      #menuItem(icon = icon("camera"),"Photo Position Finder", tabName = "Photo"),
-      #menuItem(icon = icon("ship"),"SLOW zone viewer", tabName = "szone"),
-      #menuItem(icon = icon("question-circle"),text = "Instructions Wiki", href = "https://github.com/leahcrowe/narwss_rwsas_apps/wiki")
     )                                     
   ),
   dashboardBody(
