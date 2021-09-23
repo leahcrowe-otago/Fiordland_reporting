@@ -50,9 +50,10 @@ for (i in unique(f_data$DATE)){
                         lat= ~ date_tracks$LAT,
                         group= date_tracks$DATE,
                         color= datepal(date_tracks$DATE),
-                        weight = 7,
+                        weight = 5,
                         stroke = T,
-                        fillOpacity = 0.8
+                        fillOpacity = 0.8,
+                        popup = ~date_tracks$Datetime
                         )
     }
 
