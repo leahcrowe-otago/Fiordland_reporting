@@ -1,0 +1,121 @@
+---
+geometry: margin=1.5cm
+output: pdf_document
+---
+
+  
+```{r dolphin_loop, echo=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(glue)
+library(stringr)
+library(lubridate)
+
+area<-"Doubtful"
+#area<-"Dusky"
+
+lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
+
+lifehist<-lifehist%>%
+    filter(SURVEY_AREA == area)
+
+folder.list<-list.files(paste0('./catalogue/',area), full.names = T)
+filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
+filenames_unlist<-unlist(filenames, use.names = F)
+photo_df<-data.frame(filename = filenames_unlist)
+
+photo_df<-photo_df%>%
+  mutate(
+    PART = str_extract(filename, "\\b\\w{2}\\b"),
+    NAME = str_extract(basename(filename), '^[^_]+'),
+    TYPE = str_extract(filename, "\\b\\w{5}\\b")
+  )%>%
+  arrange(TYPE,NAME)
+
+#########
+
+multiplot <- function(dolphin_name){
+  #dolphin_name = "210528UK01"
+  cat(glue::glue("#### {dolphin_name}  \n \n"))
+  
+  photo_per_dolphin <- photo_df %>% 
+    filter(as.character(NAME) == dolphin_name) %>% 
+    na.omit()
+
+  lh_dolphin <- lifehist %>% 
+    filter(as.character(NAME) == dolphin_name)
+  
+  if (nrow(lh_dolphin) == 0){
+    lh_dolphin = data.frame(CODE = "",
+                            SEX = "",
+                            X2021 = "",
+                            MOM = "",
+                            BIRTH_YEAR = "",
+                            FIRST_YEAR = "")
+  }
+  
+  if ('F' %in% lh_dolphin$SEX){
+    
+  calves <- lifehist%>%
+    filter(MOM == dolphin_name)
+  
+  if(nrow(calves) == 0){
+    calves = data.frame(NAME = 'NA')
+  }
+  
+  calves_sent<-glue_collapse(calves$NAME, ", ", last = " and ")
+  
+  cat(
+    glue::glue("\n ID code: {lh_dolphin$CODE} | sex: {lh_dolphin$SEX} | age: {lh_dolphin$X2021} |  mom: {lh_dolphin$MOM}  | birth yr: {lh_dolphin$BIRTH_YEAR} |  first yr: {lh_dolphin$FIRST_YEAR} | last yr: 
+    \n calves: {calves_sent}")
+  )
+  
+  } else {
+    
+  cat(
+    glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$X2021} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: ")
+  )
+    
+  }
+  
+  cat("  \n  \n")
+  
+  left<-photo_per_dolphin%>%filter(PART == 'LD')
+  right<-photo_per_dolphin%>%filter(PART == 'RD')
+
+  if (nrow(left) == 0){
+    cat("![](./catalogue/noimageavail.jpg){width=350}")
+  } else {
+    cat(paste0("![](", left$filename, "){width=350}"))
+  }
+  
+  cat(" ")
+  
+  if (nrow(right) == 0){
+    cat("![](./catalogue/noimageavail.jpg){width=350}")
+  } else {
+    cat(paste0("![](", right$filename, "){width=350}"))
+  }
+  
+  cat("  \n  \n")
+  
+  if (dolphin_name == "ALYSA"){
+    cat("\n\\newpage\n")
+  }
+
+  if (dolphin_name == "PL"){
+    cat("\n\\newpage\n")
+  }
+
+  if (dolphin_name == "SHMEE"){
+    cat("\n\\newpage\n")
+  }
+  
+}
+
+```
+# `r area` Sound Bottlenose Dolphin Catalogue, `r format(Sys.Date(),"%b")` `r year(Sys.Date())`
+
+```{r loop output,fig.width=2,echo=FALSE,message=FALSE,results="asis"}
+purrr::walk(unique(as.character(photo_df$NAME)), multiplot)
+```
