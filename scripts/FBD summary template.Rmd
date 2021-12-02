@@ -55,7 +55,7 @@ Group encounter days: \hfill `r nrow(params$sig_days)`
 Number of sightings: \hfill `r params$sig_count`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
-Total time with dolphins (hours): \hfill `r params$hours_wTt$total_wTt`
+Total time with dolphins within 100 m (hours): \hfill `r params$hours_wTt$total_wTt`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
