@@ -24,9 +24,9 @@ observeEvent(input$photogo,{
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
   } else {
-    #pharea = "Doubtful"
-    #phyear = 2021
-    #phmonth = '05'
+    # pharea = "Doubtful"
+    # phyear = 2021
+    # phmonth = '09'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -38,7 +38,115 @@ observeEvent(input$photogo,{
   
   pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
   print(pathimage)
+  
+  ##########################
+  ## Sightings and tracks ##
+  ##########################
+  print("sigs and trackline")
+  
+  sigs<-read.csv(paste0(pathimage,"/Sightings/f_",phyear,"_",phmonth," CyberTracker.csv"), header = T, stringsAsFactors = F)
+  sigs<-sigs%>%mutate(Datetime = dmy_hms(paste(Date, Time)))%>%
+    dplyr::select(Datetime, everything())
+  sigs$Date<-dmy(sigs$Date)
+  
+  daterange<-range(sigs$Datetime)
+  
+  raw_tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
+  tracks<-as.data.frame(raw_tracks)%>%
+    dplyr::select(DATE, TIME, LAT, LON)%>%
+    mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
+    dplyr::select(Datetime, everything())%>%
+    arrange(Datetime)%>%
+    distinct()%>%
+    group_by(Datetime)%>%
+    mutate(rank = rank(Datetime, ties.method = "first"))%>%
+    filter(rank == 1)%>%
+    dplyr::select(-rank)
+  print(nrow(tracks))
+  #find nearest position for time changes
 
+  data.table::setDT(sigs)[,  Lat := data.table::setDT(tracks)[sigs, LAT, on = "Datetime", roll = "nearest"]]
+  data.table::setDT(sigs)[,  Lon := data.table::setDT(tracks)[sigs, LON, on = "Datetime", roll = "nearest"]]
+  
+  #filter tracks to only between on/off effort      
+  f_data<-tracks%>%
+    full_join(sigs, by = c("Datetime","LAT"="Lat","LON"="Lon","DATE"="Date","TIME"="Time"))%>%
+    mutate(DATE = as.factor(DATE))%>%
+    arrange(Datetime)%>%
+    mutate(Effort = case_when(
+      Home.screen == "Encounter START" & grepl('FOLLOW$', toupper(Note)) ~ 'Follow ON',
+      Home.screen == "Encounter END & DATA" & grepl('FOLLOW$', toupper(Note)) ~ 'Follow OFF',
+      Home.screen == "Encounter START" & grepl('REPEAT$', toupper(Note)) ~ 'Repeat Encounter ON',
+      Home.screen == "Encounter END & DATA" & grepl('REPEAT$', toupper(Note)) ~ 'Repeat Encounter OFF',
+      Home.screen == "Encounter START" ~ 'Encounter ON',
+      Home.screen == "Encounter END & DATA" ~ 'Encounter OFF',
+      TRUE ~ Effort
+    ))
+  
+  onoffeffort<-f_data%>%
+    filter(grepl('Effort',Effort))%>%
+    group_by(DATE)%>%
+    mutate(min = min(Datetime),
+      max = max(Datetime))%>%
+    distinct(DATE, min, max)%>%
+    as.data.frame()
+  
+  f_data<-f_data%>%
+    left_join(onoffeffort, by = 'DATE')%>%
+    filter(Datetime >= min & Datetime <= max)
+  
+  sig_num<-f_data%>%
+    filter(grepl("Encounter", Effort) | grepl("Follow", Effort))%>%
+    mutate(signum = rep(1:(n()/2), each = 2))%>%
+    dplyr::select(Datetime, DATE, signum, Home.screen, Effort)
+  
+  f_data$Effort[f_data$Effort==""] <- NA
+  
+  f_data<-f_data%>%
+    left_join(sig_num, by = c("Datetime", "DATE","Home.screen","Effort"))%>% 
+    group_by(grp = cumsum(!is.na(Effort))) %>% 
+    mutate(Effort = replace(Effort, first(Effort) == 'Encounter ON', 'Encounter ON')) %>% 
+    mutate(Effort = replace(Effort, first(Effort) == 'Repeat Encounter ON', 'Repeat Encounter ON')) %>% 
+    mutate(Effort = replace(Effort, first(Effort) == 'Follow ON', 'Follow ON')) %>% 
+    ungroup() %>%
+    select(-grp)%>%
+    dplyr::select(Datetime, DATE, TIME, LAT, LON, Effort, Crew, signum,
+                  Species.encountered, Group.size, No..of.calves, Behaviour.state,
+                  Beaufort, Swell, Sighting.conditions, SST, Depth, Note)
+  
+  
+  sig_count<-max(f_data$signum, na.rm = T)
+  
+  sig_days<-sig_num%>%
+    distinct(DATE)
+  
+  write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
+  print(nrow(f_data))
+  
+  incProgress(3/5)
+  #convert meters to nm
+  m_nm<-1/1852
+  
+  f_data_dist<-f_data%>%
+    group_by(DATE)%>%
+    mutate(LAT2 = dplyr::lag(LAT),
+           LON2 = dplyr::lag(LON),
+           dist_km = geosphere::distVincentyEllipsoid(matrix(c(LON,LAT), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
+  
+  track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
+  
+  onoffsigs<-sig_num%>%
+    dplyr::select(signum, Datetime, Effort)%>%
+    group_by(signum)%>%
+    tidyr::pivot_wider(names_from = Effort, values_from = Datetime)
+  
+  hours_wTt<-onoffsigs%>%
+    mutate(time_wTt = as.numeric(`Encounter OFF` - `Encounter ON`),
+           time_follow = as.numeric(`Follow OFF` - `Follow ON`))%>%
+    ungroup()%>%
+    dplyr::summarise(total_wTt = round(sum(time_wTt, na.rm=TRUE)/60,1),
+                     total_follow = round(sum(time_follow, na.rm=TRUE)/60,1))
+  
   ####################
   ## Photo analysis ##
   ####################
@@ -51,7 +159,10 @@ observeEvent(input$photogo,{
    if (input$EXIF == "collect"){  
     print("merging PA")
   ##merge all PA excel spreadsheets
-  PA_xlsx<-list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T)
+  PA_xlsx<-list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T, all.files = F)
+  #exclude weird hidden excel files
+  PA_xlsx<-grep(PA_xlsx, pattern = "[~]", invert = T, value = T)
+  
   PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000))
 
   allmerge<-do.call(rbind, PA_merge)
@@ -71,10 +182,12 @@ observeEvent(input$photogo,{
              filename = basename(filenames_unlist),
              date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
   
+  #allphotod_df%>%filter(grepl('DSC',filename))
+  
   PA_fn_error<-allphotod_df%>%
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
     filter(is.na(fullfilename))
-  
+
   if (nrow(PA_fn_error) > 0){
     #return an error message before proceeding
     #and print the table
@@ -113,15 +226,16 @@ observeEvent(input$photogo,{
     print("load exif")
     allmerge_dt<-read.csv(paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = T)
     allmerge_dt$Datetime<-ymd_hms(allmerge_dt$Datetime)
-    allmerge_dt$Date<-dmy(allmerge_dt$Date)
+    allmerge_dt$Date<-ymd(allmerge_dt$Date)
+    head(allmerge_dt)
     }
   
-  tripdate_s_dt<-format(min(as.Date(f_data$DATE)), "%d %b %Y")
-  tripdate_e_dt<-format(max(as.Date(f_data$DATE)), "%d %b %Y")
+  tripdate_s_dt<-format(min(as.Date(allmerge_dt$Date)), "%d %b %Y")
+  tripdate_e_dt<-format(max(as.Date(allmerge_dt$Date)), "%d %b %Y")
   output$tripdate_s_dt_o<-renderText({tripdate_s_dt})
   output$tripdate_e_dt_o<-renderText({tripdate_e_dt})
-  recent<-format(min(as.Date(f_data$DATE)) - lubridate::years(1), "%d %b %Y")
-  older<-format(min(as.Date(f_data$DATE)) - lubridate::years(2), "%d %b %Y")
+  recent<-format(min(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
+  older<-format(min(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
   
   ##################
   ## life history ##
@@ -136,12 +250,14 @@ observeEvent(input$photogo,{
     tally()
   
   daily_cap<-photo_counts%>%
+    ungroup()%>%
     mutate_if(is.numeric, ~1 * (. > 0))%>%
     left_join(lifehist, by = c("ID_Name" = "NAME"))%>%
     dplyr::rename("NAME" = "ID_Name")%>%
     filter(NAME != "" & !grepl('_',NAME) & !grepl('CULL',NAME) & NAME != "UNMA" & !str_detect(NAME, "^UK") & !str_detect(NAME, "\\?"))%>%
     tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR"), names_from = "Date", values_from = "n")%>%
     arrange(NAME)%>%
+    mutate(year = phyear)%>%
     mutate(AgeClass = case_when(
       year - FIRST_YEAR > 3 ~ 'A',
       year - BIRTH_YEAR == 0 ~ 'C',
@@ -178,12 +294,23 @@ observeEvent(input$photogo,{
     age_sex_table<-age_sex_table%>%
       mutate(X = 0)}
   
+  allsampledays<-f_data%>%
+    distinct(DATE)%>%
+    mutate(value = 0)%>%
+    tidyr::pivot_wider(names_from = "DATE", values_from = value)
+  
   disco<-function(x){
     
     freqcap<-x%>%
-      dplyr::select(-NAME, -SEX, -BIRTH_YEAR,-FIRST_YEAR,-AgeClass)%>%
+      dplyr::select(-NAME, -SEX, -BIRTH_YEAR,-FIRST_YEAR,-AgeClass, -year)%>%
       as.data.frame()
+    
+    ##add all sample days where dolphins were not sighted
+    freqcap<-tibble::add_column(freqcap, !!!allsampledays[setdiff(names(allsampledays), names(freqcap))])
+    freqcap<-freqcap[,order(colnames(freqcap))]
+    
     freqcap[is.na(freqcap)] <- 0 
+    
     desc<-Rcapture::descriptive(freqcap)
     desc.df<-as.data.frame(desc$base.freq, row.names = FALSE)
     desc.df<-desc.df%>%
@@ -221,7 +348,7 @@ observeEvent(input$photogo,{
   caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
   
   thistrip<-daily_cap%>%
-    dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass)%>%
+    dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass, -year)%>%
     tidyr::pivot_longer(!(c(NAME)),names_to = "Date")%>%
     mutate(Date = lubridate::ymd(Date))%>%
     filter(value != 0)
@@ -241,7 +368,7 @@ observeEvent(input$photogo,{
     left_join(lifehist, by = "NAME")%>%
     mutate(AgeClass = case_when(
       year - FIRST_YEAR > 3 ~ "A",
-      year - BIRTH_YEAR == 0 ~ "C",
+      year - BIRTH_YEAR == 0 | year - BIRTH_YEAR < 0 ~ "C",
       !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR >= 0 ~ "J",
       TRUE ~ "U"
     ))
@@ -282,95 +409,52 @@ observeEvent(input$photogo,{
   
   print(unseen_table)
   
-  ##########################
-  ## Sightings and tracks ##
-  ##########################
-  print("sigs and trackline")
-  
-  sigs<-read.csv(paste0(pathimage,"/Sightings/f_",phyear,"_",phmonth," CyberTracker.csv"), header = T, stringsAsFactors = F)
-  sigs<-sigs%>%mutate(Datetime = dmy_hms(paste(Date, Time)))%>%
-    dplyr::select(Datetime, everything())
-  sigs$Date<-dmy(sigs$Date)
-  
-  daterange<-range(sigs$Datetime)
-  
-  tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
-  tracks<-as.data.frame(tracks)%>%
-    dplyr::select(DATE, TIME, LAT, LON)%>%
-    mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
-    dplyr::select(Datetime, everything())%>%
-    distinct()
-
-  #find nearest position for time changes
-  data.table::setDT(sigs)[,  Lat := data.table::setDT(tracks)[sigs, LAT, on = "Datetime", roll = "nearest"]]
-  data.table::setDT(sigs)[,  Lon := data.table::setDT(tracks)[sigs, LON, on = c("Datetime" = "Datetime"), roll = "nearest"]]
-      
-  #filter tracks to only between on/off effort      
-  f_data<-tracks%>%
-    filter(Datetime >= daterange[1] & Datetime <= daterange[2])%>%
-    full_join(sigs, by = c("Datetime","LAT"="Lat","LON"="Lon","DATE"="Date","TIME"="Time"))%>%
-    mutate(DATE = as.factor(DATE))%>%
-    arrange(Datetime)
-  
-  sig_num<-f_data%>%
-    filter(Home.screen == "Encounter END & DATA" | Home.screen == "Encounter START")%>%
-    mutate(signum = rep(1:(n()/2), each = 2))%>%
-    dplyr::select(Datetime, DATE, signum, Home.screen)
-  
-  f_data<-f_data%>%
-    left_join(sig_num, by = c("Datetime", "DATE","Home.screen"))
-
-  sig_count<-max(f_data$signum, na.rm = T)
-  
-  sig_days<-sig_num%>%
-    distinct(DATE)
-  
-  write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
-  incProgress(3/5)
-  #convert meters to nm
-  m_nm<-1/1852
-  
-  f_data_dist<-f_data%>%
-    group_by(DATE)%>%
-    mutate(LAT2 = dplyr::lag(LAT),
-           LON2 = dplyr::lag(LON),
-           dist_km = geosphere::distVincentyEllipsoid(matrix(c(LON,LAT), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
-  
-  track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
-  
-hours_wTt<-sig_num%>%
-    dplyr::select(signum, Datetime, Home.screen)%>%
-    tidyr::pivot_wider(names_from = Home.screen, values_from = Datetime)%>%
-    mutate(time_wTt = `Encounter END & DATA` - `Encounter START`)%>%
-    dplyr::summarise(total_wTt = round(as.numeric(sum(time_wTt))/60,1))
-
   #########
   ## MAP ##
   #########
   
   NZ_coast<-readOGR("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
+  
 incProgress(4/5)
-  map<-ggplot()+
-    geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
-    geom_path(f_data, mapping = aes(LON, LAT, group = DATE, color = DATE))+
-    geom_point(f_data%>%filter(Home.screen == "Encounter START"), mapping = aes(LON, LAT, color = DATE), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
-    theme_bw()+
-    scale_color_viridis_d(name = "Date")+
-    xlab("Longitude")+
-    ylab("Latitude")
+
+effmap<-ggplot()+
+  geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
+  geom_path(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE))+
+  theme_bw()+
+  scale_color_viridis_d(name = "Date")+
+  xlab("Longitude")+
+  ylab("Latitude")+
+  theme(legend.position = "none")
+
+sigmap<-ggplot()+
+  geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
+  geom_point(f_data%>%filter(grepl("Encounter", Effort) | grepl("Follow", Effort)), mapping = aes(LON, LAT, color = DATE), size = 0.1)+
+  geom_point(f_data%>%filter(Effort == "Encounter ON" & !is.na(signum)), mapping = aes(LON, LAT, color = DATE), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
+  theme_bw()+
+  scale_color_viridis_d(name = "Date")+
+  xlab("Longitude")+
+  ylab("Latitude")
   
   print("mapping")
   
   if (pharea == "Dusky"){
-    map<-map+
+    effmap<-effmap+
+      coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
+    sigmap<-sigmap+
       coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
   } else if (pharea == "Doubtful"){
-    map<-map+
+    effmap<-effmap+
+      coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)
+    sigmap<-sigmap+
       coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)
   } else {
-    map<-map+
+    effmap<-effmap+
+      coord_sf(xlim = c(min(f_data$LON),max(f_data$LON)), ylim = c(min(f_data$LAT),max(f_data$LAT)), crs = 4269)
+    sigmap<-sigmap+
       coord_sf(xlim = c(min(f_data$LON),max(f_data$LON)), ylim = c(min(f_data$LAT),max(f_data$LAT)), crs = 4269)
   }
+  
+  map<-ggpubr::ggarrange(sigmap, effmap, common.legend = T)
   
   ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 120, units = 'mm')
   incProgress(5/5)
