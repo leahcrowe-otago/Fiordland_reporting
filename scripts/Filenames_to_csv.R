@@ -17,12 +17,12 @@ and<-metadata%>%
   mutate(FileName = str_replace(FileName, "with","and"))%>%
   filter(grepl(' and ',FileName))%>%
   mutate(FileName = str_replace(FileName, " '",""),
-         Name = stringr::word(FileName, 3),
+         Name = toupper(stringr::word(FileName, 3)),
          Comments = "")
   
 photoperind<-metadata%>%
   mutate(FileName = str_replace(FileName, " '",""),
-         Name = sub(" .*","",FileName),
+         Name = toupper(sub(" .*","",FileName)),
          Comments = case_when(
            grepl("'", FileName) ~ "Conditional match",
            TRUE ~ ''))%>%
