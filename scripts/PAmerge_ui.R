@@ -14,8 +14,6 @@ fluidPage(
       textOutput("error")
     ),
     mainPanel(
-      splitLayout(h3(textOutput("tripdate_s_dt_o"), style="color:red"),h3(textOutput("tripdate_e_dt_o"), style="color:red")),
-      splitLayout(dateInput("tripdate_s","Trip start"),dateInput("tripdate_e","Trip end")),
       splitLayout(radioButtons("locbase","Location base", choices = c("Deep Cove","Anchor Island","Southern Winds"), selected = "Deep Cove", inline = FALSE),
                   radioButtons("vessel","Vessel", choices = c("Nemo","Mark Kearney","Steve Gooding"), selected = "Nemo", inline = FALSE)),
       uiOutput("crew"),
