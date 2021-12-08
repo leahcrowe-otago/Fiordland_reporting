@@ -131,8 +131,7 @@ observeEvent(input$photogo,{
                   Species.encountered, Group.size, No..of.calves, Behaviour.state,
                   Beaufort, Swell, Sighting.conditions, SST, Depth, Note, Event, -grp)
      
-  
-  sig_count<-max(f_data$signum, na.rm = T)
+  sig_count<-nrow(f_data%>%filter(Effort == 'Encounter OFF' & !is.na(signum)))
   
   sig_days<-sig_num%>%
     distinct(DATE)
