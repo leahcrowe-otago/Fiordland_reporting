@@ -20,6 +20,7 @@ params:
   older: NA
   age_sex_table: NA
   unseen_table: NA
+  unseen_names: NA
   wx_comments: NA 
   calf_comments: NA 
   next_comments: NA
@@ -55,7 +56,10 @@ Group encounter days: \hfill `r nrow(params$sig_days)`
 Number of sightings: \hfill `r params$sig_count`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
-Total time with dolphins within 100 m (hours): \hfill `r params$hours_wTt$total_wTt`
+Total time (hrs) with dolphins within 100 m (DOC permit): \hfill `r sum(params$hours_wTt$total_wTt)` (`r params$hours_wTt$total_wTt[1]`)
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Total time (hrs) with dolphins within 100–400 m (DOC permit): \hfill `r sum(params$hours_wTt$total_follow)` (`r params$hours_wTt$total_follow[1]`)
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
@@ -63,11 +67,11 @@ Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Recent population abundance estimate: \hfill `r params$pop_est$popsent`
 \vspace*{-5mm}
-```{r effort_map, echo=FALSE, fig.align='center', out.width='120%'}
+```{r effort_map, echo=FALSE, fig.align='center', out.width='100%'}
 knitr::include_graphics("./figures/map.png")
 ```
-\vspace*{-10mm}
-Fig. 1. Survey tracks and dolphin sighting locations (indicated by the red diamonds) per day. 
+\vspace*{-5mm}
+Fig. 1. Maps of dolphin sightings (a) and survey effort (b) during this research effort. a) Initial dolphin sighting locations are indicated by the red diamonds, and the colored lines represent periods of the survey spent with dolphins. 
 \newpage
 \vspace*{5mm}
 \vspace*{-5mm}
@@ -75,8 +79,8 @@ Fig. 1. Survey tracks and dolphin sighting locations (indicated by the red diamo
 ```{r disco, echo=FALSE, fig.align='center', out.width='100%'}
 knitr::include_graphics("./figures/disco_curve.png")
 ```
-\vspace*{-10mm}
-Fig. 2. Number of animals sighted on each survey day (vertical bars), and the discovery curve of new individuals identified over the survey period (black circles and lines). 
+\vspace*{-5mm}
+Fig. 2. Number of animals sighted on each survey day (vertical bars), and the discovery curve of new individuals identified over the survey period. Survey days are indicated by the circles, and the colored circles and bars indicate which permit we were operating under. 
 
 \setlength{\parindent}{0in}
 \setlength{\leftskip}{0in}
@@ -84,7 +88,7 @@ Fig. 2. Number of animals sighted on each survey day (vertical bars), and the di
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 ```{r demo_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
   add_header_above(c(" " = 1, "Sex" = 3), escape = F)
 
@@ -92,24 +96,18 @@ knitr::kable(age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs
 \vspace*{-5mm}
 ```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
 ```
 
-<!-- \setlength{\parindent}{-0.2in} -->
-<!-- \setlength{\leftskip}{0.2in} -->
-<!-- \setlength{\parskip}{8pt} -->
-<!-- *Known calves sighted (mom): `r known_calves` -->
-
-<!-- New calves sighted: `r new_calves` -->
-
-<!-- \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm} -->
+The animals in the above table include: `r params$unseen_names`
 
 \setlength{\parindent}{0in}
 \setlength{\leftskip}{0in}
 
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+\newpage
 ### Comments:
 `r params$wx_comments`
 
