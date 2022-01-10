@@ -24,9 +24,9 @@ observeEvent(input$photogo,{
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
   } else {
-    # pharea = "Doubtful"
+    # pharea = "Dusky"
     # phyear = 2021
-    # phmonth = '09'
+    # phmonth = '10'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -70,6 +70,7 @@ observeEvent(input$photogo,{
   data.table::setDT(sigs)[,  Lat := data.table::setDT(tracks)[sigs, LAT, on = "Datetime", roll = "nearest"]]
   data.table::setDT(sigs)[,  Lon := data.table::setDT(tracks)[sigs, LON, on = "Datetime", roll = "nearest"]]
   
+  sigs%>%as.data.frame()
   #filter tracks to only between on/off effort      
   f_data<-tracks%>%
     full_join(sigs, by = c("Datetime","LAT"="Lat","LON"="Lon","DATE"="Date","TIME"="Time"))%>%
@@ -89,21 +90,20 @@ observeEvent(input$photogo,{
       TRUE ~ Effort
     ),
     Permit = case_when(
-      grepl('^DOC', toupper(Note)) ~ 'DOC',
-      grepl('^UO', toupper(Note)) ~ 'UO',
+      grepl('DOC', Note) ~ 'DOC',
+      grepl('UO', Note) ~ 'UO',
       TRUE ~ ''
     ))
-  
+
+  f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
   
   onoffeffort<-f_data%>%
     filter(grepl('Effort',Effort))%>%
     group_by(DATE)%>%
     mutate(min = min(Datetime),
-      max = max(Datetime),
-      permit = Permit)%>%
-    distinct(DATE, min, max, permit)%>%
-    filter(nchar(permit) > 0)%>%
+      max = max(Datetime))%>%
+    distinct(DATE, min, max)%>%
     as.data.frame()
   
   f_data<-f_data%>%
@@ -116,19 +116,19 @@ observeEvent(input$photogo,{
   sig_num<-f_data%>%
     filter(grepl("Encounter", Effort) | grepl("Follow", Effort))%>%
     mutate(signum = rep(1:(n()/2), each = 2))%>%
-    dplyr::select(Datetime, DATE, signum, Home.screen, Effort, permit)
+    dplyr::select(Datetime, DATE, signum, Home.screen, Effort, Permit)
   
   f_data$Effort[f_data$Effort==""] <- NA
   
   f_data<-f_data%>%
-    left_join(sig_num, by = c("Datetime", "DATE","Home.screen","Effort"))%>% 
+    left_join(sig_num, by = c("Datetime", "DATE","Home.screen","Effort","Permit"))%>% 
     group_by(grp = cumsum(!is.na(Effort))) %>% 
     mutate(Effort = replace(Effort, first(Effort) == 'Encounter ON', 'Encounter ON')) %>% 
     mutate(Effort = replace(Effort, first(Effort) == 'Repeat Encounter ON', 'Repeat Encounter ON')) %>% 
     mutate(Effort = replace(Effort, first(Effort) == 'Follow ON', 'Follow ON')) %>% 
     ungroup() %>%
     dplyr::select(Datetime, DATE, TIME, LAT, LON, Effort, Crew, signum,
-                  Species.encountered, Group.size, No..of.calves, Behaviour.state,
+                  Species.encountered, Group.size, No..of.calves, Behaviour.state, Permit,
                   Beaufort, Swell, Sighting.conditions, SST, Depth, Note, Event, -grp)
      
   sig_count<-nrow(f_data%>%filter(Effort == 'Encounter OFF' & !is.na(signum)))
@@ -153,8 +153,11 @@ observeEvent(input$photogo,{
   print(f_data_dist%>%filter(dist_km > 0.1)%>%as.data.frame())
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
   
+  sig_num$Permit[sig_num$Permit==""] <- NA
+  sig_num$Permit<-zoo::na.locf(sig_num$Permit, na.rm = FALSE)
+  
   onoffsigs<-sig_num%>%
-    dplyr::select(signum, Datetime, Effort, permit)%>%
+    dplyr::select(signum, Datetime, Effort, Permit)%>%
     group_by(signum)%>%
     tidyr::pivot_wider(names_from = Effort, values_from = Datetime)
   
@@ -163,7 +166,7 @@ observeEvent(input$photogo,{
            time_wTt_r = as.numeric(difftime(`Repeat Encounter OFF`, `Repeat Encounter ON`, units = "mins")),
            time_follow = as.numeric(difftime(`Follow OFF`, `Follow ON`, units = "mins")))%>%
     ungroup()%>%
-    group_by(permit)%>%
+    group_by(Permit)%>%
     dplyr::summarise(total_wTt_e = round(sum(time_wTt, na.rm=TRUE)/60,1),
                      total_wTt_r = round(sum(time_wTt_r, na.rm=TRUE)/60,1),
                      total_follow = round(sum(time_follow, na.rm=TRUE)/60,1))%>%
@@ -216,7 +219,7 @@ observeEvent(input$photogo,{
     #and print the table
   }
   
-allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
+#allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
 
   files_for_exif<-allphotod_df%>%
     mutate(filename = stringr::str_sub(filename, end = -5))%>%
@@ -239,7 +242,7 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
   allmerge_dt<-allmerge%>%
     left_join(metadata2, by = c("Filename", "Date"))%>%
     mutate(ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
-                               grepl("JOLLY", ID_Name ~ "JOLLY-GOOD"),
+                               grepl("JOLLY", ID_Name) ~ "JOLLY-GOOD",
                                TRUE ~ ID_Name),
            Survey_Area = toupper(pharea))
   
@@ -251,7 +254,7 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
     allmerge_dt<-read.csv(paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = T)
     allmerge_dt$Datetime<-ymd_hms(allmerge_dt$Datetime)
     allmerge_dt$Date<-ymd(allmerge_dt$Date)
-
+    print(nrow(allmerge_dt))
     }
   
     ##add group # to match sighting number in final data
@@ -263,7 +266,10 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
     
     sigminmax$DATE<-ymd(sigminmax$DATE)
     
+    if('Group' %in% allmerge_dt){
+      print('group yes')
     allmerge_dt<-allmerge_dt%>%dplyr::select(-Group)
+    }
     
     allmerge_dt_group<-allmerge_dt%>%
       left_join(sigminmax, by = c('Date' = 'DATE'))%>%
@@ -387,8 +393,10 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
   
   disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
     geom_line()+
-    geom_col(mapping = aes(x = date, y = ni, color = permit), alpha = 0.5)+
-    geom_point(alpha = 0.8, size = 3, mapping = aes(color = permit))+
+    #geom_col(mapping = aes(x = date, y = ni, color = permit), alpha = 0.5)+
+    #geom_point(alpha = 0.8, size = 3, mapping = aes(color = permit))+
+    geom_col(mapping = aes(x = date, y = ni), alpha = 0.5)+
+    geom_point(alpha = 0.8, size = 3)+
     theme_bw()+
     scale_colour_viridis_d(option = 'plasma', end = 0.7)+
     xlab("")+
@@ -405,13 +413,19 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
   
   #this section is a place holder until the database is complete
   ##Capture history from Excel spreadsheet##
-  caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
+  
+  if (pharea == 'Dusky'){
+  caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)}
+  else if (pharea == 'Doubtful'){
+  caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)}
   
   thistrip<-daily_cap%>%
     dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass, -year)%>%
     tidyr::pivot_longer(!(c(NAME)),names_to = "Date")%>%
     mutate(Date = lubridate::ymd(Date))%>%
     filter(value != 0)
+  
+  thistrip_names<-thistrip%>%distinct(NAME)%>%as.data.frame()
   
   print('365')
   all_first_last<-caphist%>%
@@ -422,7 +436,8 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
     bind_rows(thistrip)%>%
     group_by(NAME)%>%
     mutate(first_date = min(Date),
-           last_date = max(Date))%>%
+           last_date = max(Date),
+           NAME = toupper(NAME))%>%
     distinct(NAME,first_date,last_date)%>%
     filter(!is.na(NAME))%>%
     arrange(NAME)%>%
@@ -438,6 +453,7 @@ allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
   all_first_last$DEATH_YEAR<-as.numeric(all_first_last$DEATH_YEAR)
   
   unseen_two_years<-all_first_last%>%
+    anti_join(thistrip_names)%>%
     filter(is.na(DEATH_YEAR))%>%
     filter(last_date < max(as.Date(f_data$DATE)) - lubridate::years(1) & last_date >= max(as.Date(f_data$DATE)) - lubridate::years(2))%>%
     mutate(LAST_YEAR = lubridate::year(last_date))%>%
