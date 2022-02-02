@@ -11,15 +11,15 @@ library(glue)
 library(stringr)
 library(lubridate)
 
-area<-"Doubtful"
-#area<-"Dusky"
+#area<-"Doubtful"
+area<-"Dusky"
 
 lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
 
 lifehist<-lifehist%>%
     filter(SURVEY_AREA == area)
 
-folder.list<-list.files(paste0('./catalogue/',area), full.names = T)
+folder.list<-list.files(paste0('./catalogue/',area,'_Sound'), full.names = T)
 filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
 photo_df<-data.frame(filename = filenames_unlist)
@@ -30,7 +30,8 @@ photo_df<-photo_df%>%
     NAME = str_extract(basename(filename), '^[^_]+'),
     TYPE = str_extract(filename, "\\b\\w{5}\\b")
   )%>%
-  arrange(TYPE,NAME)
+  arrange(TYPE,NAME)%>%
+  filter(!is.na(NAME))
 
 #########
 
@@ -99,7 +100,63 @@ multiplot <- function(dolphin_name){
   
   cat("  \n  \n")
   
-  if (dolphin_name == "ALYSA"){
+
+if (area == "Dusky"){
+
+  if (dolphin_name == "BAN"){
+    cat("\n\\newpage\n")
+  }
+  
+  if (dolphin_name == "DOODLE"){
+    cat("\n\\newpage\n")
+  }
+
+  if (dolphin_name == "GULLY"){
+    cat("\n\\newpage\n")
+  }
+  
+    if (dolphin_name == "HORSE"){
+  cat("\n\\newpage\n")
+    } 
+  
+  if (dolphin_name == "OAK"){
+    cat("\n\\newpage\n")
+  }
+  
+  if (dolphin_name == "PEANUT"){
+    cat("\n\\newpage\n")
+  }
+  
+  if (dolphin_name == "STING"){
+    cat("\n\\newpage\n")
+  }  
+
+    if (dolphin_name == "NESS"){
+    cat("\n\\newpage\n")
+  }
+  
+    if (dolphin_name == "PIMPLE"){
+    cat("\n\\newpage\n")
+  }
+  
+    if (dolphin_name == "SCOOP"){
+    cat("\n\\newpage\n")
+  }
+  
+}
+  
+  
+if (area == "Doubtful"){  
+  
+  if (dolphin_name == "CHIP"){
+    cat("\n\\newpage\n")
+  }
+
+  if (dolphin_name == "DANGER"){
+    cat("\n\\newpage\n")
+  }
+
+  if (dolphin_name == "MAKO"){
     cat("\n\\newpage\n")
   }
 
@@ -111,6 +168,7 @@ multiplot <- function(dolphin_name){
     cat("\n\\newpage\n")
   }
   
+}
 }
 
 ```
