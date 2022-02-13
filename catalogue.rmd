@@ -15,10 +15,12 @@ library(lubridate)
 area<-"Dusky"
 
 lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
-
+LASTYEARAGE<-(lifehist[9])
+names(LASTYEARAGE)<-c("LASTYEAR_AGE")
 lifehist<-lifehist%>%
+    mutate(LASTYEAR_AGE = LASTYEARAGE$LASTYEAR_AGE)%>%
     filter(SURVEY_AREA == area)
-
+    
 folder.list<-list.files(paste0('./catalogue/',area,'_Sound'), full.names = T)
 filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
@@ -49,7 +51,7 @@ multiplot <- function(dolphin_name){
   if (nrow(lh_dolphin) == 0){
     lh_dolphin = data.frame(CODE = "",
                             SEX = "",
-                            X2021 = "",
+                            LASTYEAR_AGE = "",
                             MOM = "",
                             BIRTH_YEAR = "",
                             FIRST_YEAR = "")
@@ -67,14 +69,14 @@ multiplot <- function(dolphin_name){
   calves_sent<-glue_collapse(calves$NAME, ", ", last = " and ")
   
   cat(
-    glue::glue("\n ID code: {lh_dolphin$CODE} | sex: {lh_dolphin$SEX} | age: {lh_dolphin$X2021} |  mom: {lh_dolphin$MOM}  | birth yr: {lh_dolphin$BIRTH_YEAR} |  first yr: {lh_dolphin$FIRST_YEAR} | last yr: 
+    glue::glue("\n ID code: {lh_dolphin$CODE} | sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM}  | birth yr: {lh_dolphin$BIRTH_YEAR} |  first yr: {lh_dolphin$FIRST_YEAR} | last yr: 
     \n calves: {calves_sent}")
   )
   
   } else {
     
   cat(
-    glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$X2021} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: ")
+    glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: ")
   )
     
   }
@@ -107,15 +109,15 @@ if (area == "Dusky"){
     cat("\n\\newpage\n")
   }
   
-  if (dolphin_name == "DOODLE"){
+  if (dolphin_name == "DIVIDE"){
     cat("\n\\newpage\n")
   }
 
-  if (dolphin_name == "GULLY"){
+  if (dolphin_name == "GAMBLE"){
     cat("\n\\newpage\n")
   }
   
-    if (dolphin_name == "HORSE"){
+    if (dolphin_name == "HOLY"){
   cat("\n\\newpage\n")
     } 
   
@@ -127,18 +129,25 @@ if (area == "Dusky"){
     cat("\n\\newpage\n")
   }
   
-  if (dolphin_name == "STING"){
+  if (dolphin_name == "RHODES"){
     cat("\n\\newpage\n")
   }  
 
-    if (dolphin_name == "NESS"){
+    if (dolphin_name == "BLANK"){
     cat("\n\\newpage\n")
   }
   
-    if (dolphin_name == "PIMPLE"){
+    if (dolphin_name == "COMMON"){
     cat("\n\\newpage\n")
   }
+      
+  if (dolphin_name == "NESS"){
+    cat("\n\\newpage\n")
+      }
   
+  if (dolphin_name == "OYSTER"){
+    cat("\n\\newpage\n")
+  }
     if (dolphin_name == "SCOOP"){
     cat("\n\\newpage\n")
   }
