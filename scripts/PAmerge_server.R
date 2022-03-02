@@ -24,9 +24,9 @@ observeEvent(input$photogo,{
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
   } else {
-    # pharea = "Dusky"
-    # phyear = 2021
-    # phmonth = '10'
+    # pharea = "Doubtful"
+    # phyear = 2022
+    # phmonth = '01'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -54,7 +54,7 @@ observeEvent(input$photogo,{
   raw_tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
 
   tracks<-as.data.frame(raw_tracks)%>%
-    dplyr::select(DATE, TIME, LAT, LON)%>%
+    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE)%>%
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
     #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
@@ -67,13 +67,13 @@ observeEvent(input$photogo,{
   print(nrow(tracks))
   #find nearest position for time changes
 
-  data.table::setDT(sigs)[,  Lat := data.table::setDT(tracks)[sigs, LAT, on = "Datetime", roll = "nearest"]]
-  data.table::setDT(sigs)[,  Lon := data.table::setDT(tracks)[sigs, LON, on = "Datetime", roll = "nearest"]]
+  data.table::setDT(sigs)[,  Latitude := data.table::setDT(tracks)[sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
+  data.table::setDT(sigs)[,  Longitude := data.table::setDT(tracks)[sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
   
   sigs%>%as.data.frame()
   #filter tracks to only between on/off effort      
   f_data<-tracks%>%
-    full_join(sigs, by = c("Datetime","LAT"="Lat","LON"="Lon","DATE"="Date","TIME"="Time"))%>%
+    full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
     mutate(DATE = as.factor(DATE),
            across(where(is.character), ~na_if(., "")))%>% # add in NAs where there are blanks
     #group_by(DATE)%>%
@@ -190,15 +190,18 @@ observeEvent(input$photogo,{
   PA_xlsx<-grep(PA_xlsx, pattern = "[~]", invert = T, value = T)
   
   PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000))
-
+  nrow(PA_merge[[1]])
+  nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
+  nrow(allmerge)
   allmerge$Date<-ymd(allmerge$Date)
   allmerge<-allmerge%>%
     mutate(ID_Name = case_when(
       is.na(ID_Name) ~ 'UNMA',
       TRUE ~ ID_Name))%>%
     filter(ID_Name != "CULL")
-
+  nrow(allmerge)
+  
   #list folders that start with the year
   folder.list<-list.files(pathimage, pattern = paste0("^",phyear), full.names = T)
   filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
@@ -207,7 +210,7 @@ observeEvent(input$photogo,{
   allphotod_df<-data.frame(fullfilename = filenames_unlist,
              filename = basename(filenames_unlist),
              date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
-  
+
   #allphotod_df%>%filter(grepl('DSC',filename))
   
   PA_fn_error<-allphotod_df%>%
@@ -226,7 +229,7 @@ observeEvent(input$photogo,{
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
     distinct(fullfilename)%>%
     filter(!is.na(fullfilename))
-
+  
   incProgress(1/5)
   print("getting exif data")
   #get exif data
@@ -238,6 +241,7 @@ observeEvent(input$photogo,{
            Datetime = ymd_hms(DateTimeOriginal),
            Date = as.Date(Datetime))%>%
     dplyr::select(Filename, Datetime, Date)
+  nrow(metadata2)
   
   allmerge_dt<-allmerge%>%
     left_join(metadata2, by = c("Filename", "Date"))%>%
@@ -296,6 +300,7 @@ observeEvent(input$photogo,{
   ## life history ##
   ##################
   
+  #fiordland_bottlenose.age_sex view
   lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
   
   photo_counts<-allmerge_dt%>%
@@ -526,11 +531,13 @@ sigmap<-ggplot()+
       coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
     sigmap<-sigmap+
       coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
+    h = 100
   } else if (pharea == "Doubtful"){
     effmap<-effmap+
       coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)
     sigmap<-sigmap+
       coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)
+    h = 100
   } else {
     effmap<-effmap+
       coord_sf(xlim = c(min(f_data$LON),max(f_data$LON)), ylim = c(min(f_data$LAT),max(f_data$LAT)), crs = 4269)
@@ -540,7 +547,7 @@ sigmap<-ggplot()+
   
   map<-ggpubr::ggarrange(sigmap, effmap, common.legend = T, legend = "bottom", widths = c(1.15,1), labels = 'auto')
   
-  ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 120, units = 'mm')
+  ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = h, units = 'mm')
   incProgress(5/5)
  print("Done")
  enable("report")
