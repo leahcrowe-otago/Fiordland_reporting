@@ -519,7 +519,7 @@ effmap<-ggplot()+
   #geom_path(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE))+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
-  #xlab("Longitude")+
+  xlab("Longitude")+
   ylab("")+
   theme(legend.position = "none",
         axis.text.y=element_blank())
@@ -529,7 +529,7 @@ sigmap<-ggplot()+
   #path
   geom_point(f_data%>%filter(!is.na(Encounter_Type)), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
   #start point
-  geom_point(f_data%>%filter(Event_Type == 'Encounter START'), mapping = aes(Longitude, Latitude, color = Date), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
+  geom_point(f_data%>%filter(Event_Type == 'Encounter START' & Encounter_Type == 'Initial'), mapping = aes(Longitude, Latitude, color = Date), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
   xlab("Longitude")+
