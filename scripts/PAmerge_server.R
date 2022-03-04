@@ -75,27 +75,27 @@ observeEvent(input$photogo,{
   f_data<-tracks%>%
     full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
     mutate(DATE = as.factor(DATE),
-           across(where(is.character), ~na_if(., "")))%>% # add in NAs where there are blanks
+           across(where(is.character), ~na_if(., "")))#%>% # add in NAs where there are blanks
     #group_by(DATE)%>%
     #mutate(Event = case_when(Effort == 'Effort ON' ~ 1, TRUE ~ 0))%>%
     #ungroup()%>%
-    arrange(Datetime)%>%
-    mutate(Effort = case_when(
-      Home.screen == "Encounter START" & grepl('^FOLLOW', toupper(Note)) ~ 'Follow ON',
-      Home.screen == "Encounter END & DATA" & grepl('^FOLLOW', toupper(Note)) ~ 'Follow OFF',
-      Home.screen == "Encounter START" & grepl('^REPEAT', toupper(Note)) ~ 'Repeat Encounter ON',
-      Home.screen == "Encounter END & DATA" & grepl('^REPEAT', toupper(Note)) ~ 'Repeat Encounter OFF',
-      Home.screen == "Encounter START" ~ 'Encounter ON',
-      Home.screen == "Encounter END & DATA" ~ 'Encounter OFF',
-      TRUE ~ Effort
-    ),
-    Permit = case_when(
-      grepl('DOC', Note) ~ 'DOC',
-      grepl('UO', Note) ~ 'UO',
-      TRUE ~ ''
-    ))
+    # arrange(Datetime)%>%
+    # mutate(Effort = case_when(
+    #   Event_type == "Encounter START" & grepl('^FOLLOW', toupper(Note)) ~ 'Follow ON',
+    #   Event_type == "Encounter END & DATA" & grepl('^FOLLOW', toupper(Note)) ~ 'Follow OFF',
+    #   Event_type == "Encounter START" & grepl('^REPEAT', toupper(Note)) ~ 'Repeat Encounter ON',
+    #   Event_type == "Encounter END & DATA" & grepl('^REPEAT', toupper(Note)) ~ 'Repeat Encounter OFF',
+    #   Event_type == "Encounter START" ~ 'Encounter ON',
+    #   Event_type == "Encounter END & DATA" ~ 'Encounter OFF',
+    #   TRUE ~ Effort
+    # ),
+    # Permit = case_when(
+    #   grepl('DOC', Note) ~ 'DOC',
+    #   grepl('UO', Note) ~ 'UO',
+    #   TRUE ~ ''
+    # ))
 
-  f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
+  #f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
   
   onoffeffort<-f_data%>%
@@ -114,29 +114,32 @@ observeEvent(input$photogo,{
   f_data$Event<-zoo::na.locf(f_data$Event, na.rm = FALSE)
   
   sig_num<-f_data%>%
-    filter(grepl("Encounter", Effort) | grepl("Follow", Effort))%>%
+    filter(grepl("Encounter", Event_Type))%>%
     mutate(signum = rep(1:(n()/2), each = 2))%>%
-    dplyr::select(Datetime, DATE, signum, Home.screen, Effort, Permit)
+    dplyr::select(Datetime, DATE, signum, Effort, Event_Type, Encounter_Type, Permit)
   
   f_data$Effort[f_data$Effort==""] <- NA
+  f_data$Encounter_Type[f_data$Encounter_Type==""] <- NA
   
-  f_data<-f_data%>%
-    left_join(sig_num, by = c("Datetime", "DATE","Home.screen","Effort","Permit"))%>% 
-    group_by(grp = cumsum(!is.na(Effort))) %>% 
-    mutate(Effort = replace(Effort, first(Effort) == 'Encounter ON', 'Encounter ON')) %>% 
-    mutate(Effort = replace(Effort, first(Effort) == 'Repeat Encounter ON', 'Repeat Encounter ON')) %>% 
-    mutate(Effort = replace(Effort, first(Effort) == 'Follow ON', 'Follow ON')) %>% 
+  f_data<-f_data%>%dplyr::select(-Encounter_Type)%>%
+    left_join(sig_num, by = c("Datetime", "DATE","Event_Type", "Effort","Permit"))%>% 
+    group_by(grp = cumsum(!is.na(signum))) %>% #group by Encounter_Type downfill from START to END
+    mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Initial', 'Initial')) %>% 
+    mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Repeat', 'Repeat')) %>% 
+    mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Follow', 'Follow')) %>% 
     ungroup() %>%
-    dplyr::select(Datetime, DATE, TIME, LAT, LON, Effort, Crew, signum,
-                  Species.encountered, Group.size, No..of.calves, Behaviour.state, Permit,
-                  Beaufort, Swell, Sighting.conditions, SST, Depth, Note, Event, -grp)
+    dplyr::select(Datetime, DATE, TIME, LATITUDE, LONGITUDE, Effort, Event_Type, Encounter_Type, Crew, signum,
+                  Species, Group_Size, Calves, Behaviours, Permit,
+                  Beaufort, Swell, Glare, Visibility, Overall, SST, Depth, Note, Event, Tawaki, -grp)%>%
+    dplyr::rename(Date = DATE, Time = TIME, Latitude = LATITUDE, Longitude = LONGITUDE, Sighting_Number = signum)
      
-  sig_count<-nrow(f_data%>%filter(Effort == 'Encounter OFF' & !is.na(signum)))
+  sig_count<-max(f_data$Sighting_Number)
   
   sig_days<-sig_num%>%
     distinct(DATE)
   
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
+  write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   print(nrow(f_data))
   
   incProgress(3/5)
@@ -145,33 +148,38 @@ observeEvent(input$photogo,{
   
   f_data_dist<-f_data%>%
     arrange(Datetime)%>%
-    group_by(DATE,Event)%>%
-    mutate(LAT2 = dplyr::lag(LAT),
-           LON2 = dplyr::lag(LON),
-           dist_km = geosphere::distVincentyEllipsoid(matrix(c(LON,LAT), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
+    group_by(Date,Event)%>%
+    mutate(LAT2 = dplyr::lag(Latitude),
+           LON2 = dplyr::lag(Longitude),
+           dist_km = geosphere::distVincentyEllipsoid(matrix(c(Longitude,Latitude), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
   
   print(f_data_dist%>%filter(dist_km > 0.1)%>%as.data.frame())
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
   
   sig_num$Permit[sig_num$Permit==""] <- NA
   sig_num$Permit<-zoo::na.locf(sig_num$Permit, na.rm = FALSE)
+  sig_num$Encounter_Type<-zoo::na.locf(sig_num$Encounter_Type, na.rm = FALSE)
   
   onoffsigs<-sig_num%>%
-    dplyr::select(signum, Datetime, Effort, Permit)%>%
-    group_by(signum)%>%
-    tidyr::pivot_wider(names_from = Effort, values_from = Datetime)
+    dplyr::select(signum, Datetime, Encounter_Type, Event_Type, Permit)%>%
+    group_by(signum, Encounter_Type)%>%
+    tidyr::pivot_wider(names_from = Event_Type, values_from = Datetime)%>%
+    mutate(time_w = as.numeric(difftime(`Encounter END & DATA`,`Encounter START`), units = "mins"))
+  
+  unique(onoffsigs$Permit)
   
   hours_wTt<-onoffsigs%>%
-    mutate(time_wTt = as.numeric(difftime(`Encounter OFF`, `Encounter ON`, units = "mins")),
-           time_wTt_r = as.numeric(difftime(`Repeat Encounter OFF`, `Repeat Encounter ON`, units = "mins")),
-           time_follow = as.numeric(difftime(`Follow OFF`, `Follow ON`, units = "mins")))%>%
+    group_by(Encounter_Type, Permit)%>%
+    dplyr::summarise(Total_time = sum(time_w, na.rm=TRUE))%>%
+    mutate(distance = case_when(
+      Encounter_Type == 'Follow' ~ '100–400',
+      TRUE ~ '<100'))%>%
     ungroup()%>%
-    group_by(Permit)%>%
-    dplyr::summarise(total_wTt_e = round(sum(time_wTt, na.rm=TRUE)/60,1),
-                     total_wTt_r = round(sum(time_wTt_r, na.rm=TRUE)/60,1),
-                     total_follow = round(sum(time_follow, na.rm=TRUE)/60,1))%>%
-    mutate(total_wTt = total_wTt_e + total_wTt_r)%>%
-    dplyr::select(-total_wTt_e, -total_wTt_r)
+    group_by(Permit, distance)%>%
+    dplyr::summarise(Total_time_dist = round(sum(Total_time, na.rm = TRUE)/60,1))%>%
+    ungroup()%>%
+    tidyr::pivot_wider(distance, names_from = Permit, values_from = Total_time_dist)%>%
+    mutate(total_wTt = DOC + Otago)
   
   ####################
   ## Photo analysis ##
@@ -191,7 +199,7 @@ observeEvent(input$photogo,{
   
   PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000))
   nrow(PA_merge[[1]])
-  nrow(PA_merge[[2]])
+  #nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
   nrow(allmerge)
   allmerge$Date<-ymd(allmerge$Date)
@@ -262,13 +270,13 @@ observeEvent(input$photogo,{
     }
   
     ##add group # to match sighting number in final data
-    sigminmax<-f_data%>%filter(!is.na(signum))%>%
-      group_by(signum)%>%
+    sigminmax<-f_data%>%filter(!is.na(Sighting_Number))%>%
+      group_by(Sighting_Number)%>%
       mutate(max = max(Datetime),
              min = min(Datetime))%>%
-      distinct(DATE, signum, min, max)
+      distinct(Date, Sighting_Number, min, max)
     
-    sigminmax$DATE<-ymd(sigminmax$DATE)
+    sigminmax$Date<-ymd(sigminmax$Date)
     
     if('Group' %in% allmerge_dt){
       print('group yes')
@@ -276,12 +284,12 @@ observeEvent(input$photogo,{
     }
     
     allmerge_dt_group<-allmerge_dt%>%
-      left_join(sigminmax, by = c('Date' = 'DATE'))%>%
+      left_join(sigminmax, by = "Date")%>%
       mutate(Group = case_when(
-        Datetime >= min & Datetime <= max ~ signum
+        Datetime >= min & Datetime <= max ~ Sighting_Number
       ))%>%
       filter(!is.na(Group))%>%
-      dplyr::select(-signum, -max, -min)%>%
+      dplyr::select(-Sighting_Number, -max, -min)%>%
       distinct()
     
     nogroup<-allmerge_dt%>%
@@ -358,9 +366,9 @@ observeEvent(input$photogo,{
       mutate(X = 0)}
   
   allsampledays<-f_data%>%
-    distinct(DATE)%>%
+    distinct(Date)%>%
     mutate(value = 0)%>%
-    tidyr::pivot_wider(names_from = "DATE", values_from = value)
+    tidyr::pivot_wider(names_from = "Date", values_from = value)
   
   disco<-function(x){
     x<-daily_cap
@@ -398,8 +406,8 @@ observeEvent(input$photogo,{
   
   disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
     geom_line()+
-    #geom_col(mapping = aes(x = date, y = ni, color = permit), alpha = 0.5)+
-    #geom_point(alpha = 0.8, size = 3, mapping = aes(color = permit))+
+    #geom_col(mapping = aes(x = date, y = ni, color = Permit), alpha = 0.5)+
+    #geom_point(alpha = 0.8, size = 3, mapping = aes(color = Permit))+
     geom_col(mapping = aes(x = date, y = ni), alpha = 0.5)+
     geom_point(alpha = 0.8, size = 3)+
     theme_bw()+
@@ -420,9 +428,10 @@ observeEvent(input$photogo,{
   ##Capture history from Excel spreadsheet##
   
   if (pharea == 'Dusky'){
-  caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)}
-  else if (pharea == 'Doubtful'){
-  caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)}
+  caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
+  } else if (pharea == 'Doubtful'){
+  caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)
+  }
   
   thistrip<-daily_cap%>%
     dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass, -year)%>%
@@ -506,19 +515,21 @@ incProgress(4/5)
 
 effmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
-  geom_point(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE), size = 0.1)+
+  geom_point(f_data%>%arrange(Datetime), mapping = aes(Longitude, Latitude, group = Date, color = Date), size = 0.1)+
   #geom_path(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE))+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
-  xlab("Longitude")+
+  #xlab("Longitude")+
   ylab("")+
   theme(legend.position = "none",
         axis.text.y=element_blank())
 
 sigmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
-  geom_point(f_data%>%filter(grepl("Encounter", Effort) | grepl("Follow", Effort)), mapping = aes(LON, LAT, color = DATE), size = 0.1)+
-  geom_point(f_data%>%filter(Effort == "Encounter ON" & !is.na(signum)), mapping = aes(LON, LAT, color = DATE), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
+  #path
+  geom_point(f_data%>%filter(!is.na(Encounter_Type)), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
+  #start point
+  geom_point(f_data%>%filter(Event_Type == 'Encounter START'), mapping = aes(Longitude, Latitude, color = Date), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
   xlab("Longitude")+
