@@ -133,8 +133,8 @@ observeEvent(input$photogo,{
                   Beaufort, Swell, Glare, Visibility, Overall, SST, Depth, Note, Event, Tawaki, -grp)%>%
     dplyr::rename(Date = DATE, Time = TIME, Latitude = LATITUDE, Longitude = LONGITUDE, Sighting_Number = signum)
      
-  sig_count<-max(f_data$Sighting_Number)
-  
+  sig_count<-max(f_data$Sighting_Number, na.rm = T)
+
   sig_days<-sig_num%>%
     distinct(DATE)
   
@@ -327,31 +327,39 @@ observeEvent(input$photogo,{
     tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR"), names_from = "Date", values_from = "n")%>%
     arrange(NAME)%>%
     mutate(year = as.numeric(phyear))%>%
+    mutate(SEX=replace(SEX, is.na(SEX), 'X'))%>%
     mutate(AgeClass = case_when(
-      (year - FIRST_YEAR) > 3 ~ 'A',
-      (year - BIRTH_YEAR) < 1 ~ 'C',
-      BIRTH_YEAR != 0 & (year - BIRTH_YEAR) <= 3 & (year - BIRTH_YEAR) > 0 ~ 'J',
-      TRUE ~ 'U'
-    ))%>%
-    mutate(SEX=replace(SEX, is.na(SEX), 'X'))
+      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) >= 9 ~ 'A',
+      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) < 1 ~ 'C',
+      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) < 9 & (year - BIRTH_YEAR) > 3 ~ 'S-A',
+      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) >= 1 & (year - BIRTH_YEAR) <= 3 ~ 'W',
+       is.na(BIRTH_YEAR) & (year - FIRST_YEAR) >= 8 ~ 'A',
+      TRUE ~ 'U')
+    )
   
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
-  
+  trip_cap%>%filter(AgeClass == 'W')%>%as.data.frame()
   print('277')
   age_sex_table<-trip_cap%>%
     dplyr::select(-NAME)%>%
     group_by(SEX, AgeClass)%>%
     tally()%>%
     tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
-    arrange(factor(AgeClass, levels = c("A","J","C","U")))%>%
-    replace(is.na(.), 0)%>%
+    arrange(factor(AgeClass, levels = c("A","S-A","W","C","U")))%>%
+    replace(is.na(.), 0)
+  
+  age_class_abbr<-function(x) {
+    x %>%
     mutate(AgeClass = case_when(
-      AgeClass == 'A' ~ "Adult",
-      AgeClass == 'J' ~ "Juvenile",
-      AgeClass == 'C' ~ "Calf*",
-      AgeClass == 'U' ~ "Unknown"
-    ))
+          AgeClass == 'A' ~ "Adult",
+          AgeClass == 'S-A' ~ "Sub-Adult",
+          AgeClass == 'W' ~ "Weanling",
+          AgeClass == 'C' ~ "Calf*",
+          AgeClass == 'U' ~ "Unknown"
+        ))}
+    
+  age_sex_table<-age_class_abbr(age_sex_table)
   
   if (!"M" %in% colnames(age_sex_table)){
     age_sex_table<-age_sex_table%>%
@@ -469,7 +477,7 @@ observeEvent(input$photogo,{
   unseen_two_years<-all_first_last%>%
     anti_join(thistrip_names)%>%
     filter(is.na(DEATH_YEAR))%>%
-    filter(last_date < max(as.Date(f_data$DATE)) - lubridate::years(1) & last_date >= max(as.Date(f_data$DATE)) - lubridate::years(2))%>%
+    filter(last_date < max(as.Date(onoffeffort$DATE)) - lubridate::years(1) & last_date >= max(as.Date(onoffeffort$DATE)) - lubridate::years(2))%>%
     mutate(LAST_YEAR = lubridate::year(last_date))%>%
     mutate(NameSex = case_when(
       nchar(NAME) > 2 ~ paste0(str_to_title(NAME)," (",SEX,")"),
@@ -483,13 +491,9 @@ observeEvent(input$photogo,{
     tally()%>%
     tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
     arrange(factor(AgeClass, levels = c("A","J","C")))%>%
-    replace(is.na(.), 0)%>%
-    mutate(AgeClass = case_when(
-      AgeClass == 'A' ~ "Adult",
-      AgeClass == 'J' ~ "Juvenile",
-      AgeClass == 'C' ~ "Calf*",
-      AgeClass == 'U' ~ "Unknown*"
-    ))
+    replace(is.na(.), 0)
+  
+  unseen_table<-age_class_abbr(unseen_table)
   
   if (!"M" %in% colnames(unseen_table)){
     unseen_table<-unseen_table%>%
@@ -551,9 +555,9 @@ sigmap<-ggplot()+
     h = 100
   } else {
     effmap<-effmap+
-      coord_sf(xlim = c(min(f_data$LON),max(f_data$LON)), ylim = c(min(f_data$LAT),max(f_data$LAT)), crs = 4269)
+      coord_sf(xlim = c(min(f_data$Longitude),max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
     sigmap<-sigmap+
-      coord_sf(xlim = c(min(f_data$LON),max(f_data$LON)), ylim = c(min(f_data$LAT),max(f_data$LAT)), crs = 4269)
+      coord_sf(xlim = c(min(f_data$Longitude),max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
   }
   
   map<-ggpubr::ggarrange(sigmap, effmap, common.legend = T, legend = "bottom", widths = c(1.15,1), labels = 'auto')
@@ -575,7 +579,7 @@ sigmap<-ggplot()+
       tripdate_s<-format(min(onoffeffort$DATE), "%d %b %Y")
       tripdate_e<-format(max(onoffeffort$DATE), "%d %b %Y")
       loc_base<-paste0(pharea,"/",input$locbase)
-      nsurveydays<-nrow(f_data%>%distinct(DATE))
+      nsurveydays<-nrow(f_data%>%distinct(Date))
       vessel<-input$vessel
       crew<-stringr::str_c(input$crew, "\\linebreak", collapse = " ")
       crew<-substr(crew,1,nchar(crew)-10)
