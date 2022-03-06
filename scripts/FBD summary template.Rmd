@@ -28,6 +28,13 @@ header-includes:
 - \usepackage{float}
 - \usepackage{booktabs}
 ---
+
+```{r hours, echo=FALSE}
+
+hours_100<-params$hours_wTt%>%filter(distance == '<100')
+hours_100400<-params$hours_wTt%>%filter(distance != '<100')
+
+```
 \vspace*{-5mm}
 Trip location and base: \hfill `r params$loc_base`
 \vspace*{-1mm}
@@ -56,10 +63,10 @@ Group encounter days: \hfill `r nrow(params$sig_days)`
 Number of sightings: \hfill `r params$sig_count`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
-Total time (hrs) with dolphins within 100 m (DOC permit): \hfill `r sum(params$hours_wTt$total_wTt)` (`r params$hours_wTt$total_wTt[1]`)
+Total time (hrs) with dolphins within 100 m (DOC permit): \hfill `r hours_100$total_wTt` (`r hours_100$DOC`)
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
-Total time (hrs) with dolphins within 100–400 m (DOC permit): \hfill `r sum(params$hours_wTt$total_follow)` (`r params$hours_wTt$total_follow[1]`)
+Total time (hrs) with dolphins within 100–400 m (DOC permit): \hfill `r hours_100400$total_wTt` (`r hours_100400$DOC`)
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
@@ -80,7 +87,7 @@ Fig. 1. Maps of dolphin sightings (a) and survey effort (b) during this research
 knitr::include_graphics("./figures/disco_curve.png")
 ```
 \vspace*{-5mm}
-Fig. 2. Number of animals sighted on each survey day (vertical bars), and the discovery curve of new individuals identified over the survey period. Survey days are indicated by the circles, and the colored circles and bars indicate which permit we were operating under. 
+Fig. 2. Number of animals sighted on each survey day (vertical bars), and the discovery curve of new individuals identified over the survey period. Survey days are indicated by the black circles. 
 
 \setlength{\parindent}{0in}
 \setlength{\leftskip}{0in}
@@ -88,7 +95,7 @@ Fig. 2. Number of animals sighted on each survey day (vertical bars), and the di
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 ```{r demo_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = "Age class and sex structure of individuals sighted. Adult = 9+ yo or sighted more than 8 years, Sub-Adult = 4–8 yo, Weanling = 1–3 yo, Calf = <1 yo.", col.names = c("Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
   add_header_above(c(" " = 1, "Sex" = 3), escape = F)
 
@@ -96,7 +103,7 @@ knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", b
 \vspace*{-5mm}
 ```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 3+ yo or sighted more than 3 years, Juvenile = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 9+ yo or sighted more than 8 years, Sub-Adult = 4–8 yo, Weanling = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
 ```
