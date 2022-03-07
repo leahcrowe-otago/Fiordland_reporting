@@ -103,7 +103,7 @@ knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", b
 \vspace*{-5mm}
 ```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). Adult = 9+ yo or sighted more than 8 years, Sub-Adult = 4–8 yo, Weanling = 1–3 yo, Calf = <1 yo."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). See Table 1 for age class definitions."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
 ```
