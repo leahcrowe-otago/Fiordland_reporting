@@ -1,8 +1,8 @@
 library(dplyr); library(exifr); library(stringr); library(lubridate)
 
 path<-"//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/Doubtful Sound Dolphin Monitoring/"
-year<-2021
-YYYY_MM<-'2021_01'
+year<-2020
+YYYY_MM<-'2020_11'
 
 fullpath<-paste0(path,year,"/",YYYY_MM,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
