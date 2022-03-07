@@ -75,25 +75,7 @@ observeEvent(input$photogo,{
   f_data<-tracks%>%
     full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
     mutate(DATE = as.factor(DATE),
-           across(where(is.character), ~na_if(., "")))#%>% # add in NAs where there are blanks
-    #group_by(DATE)%>%
-    #mutate(Event = case_when(Effort == 'Effort ON' ~ 1, TRUE ~ 0))%>%
-    #ungroup()%>%
-    # arrange(Datetime)%>%
-    # mutate(Effort = case_when(
-    #   Event_type == "Encounter START" & grepl('^FOLLOW', toupper(Note)) ~ 'Follow ON',
-    #   Event_type == "Encounter END & DATA" & grepl('^FOLLOW', toupper(Note)) ~ 'Follow OFF',
-    #   Event_type == "Encounter START" & grepl('^REPEAT', toupper(Note)) ~ 'Repeat Encounter ON',
-    #   Event_type == "Encounter END & DATA" & grepl('^REPEAT', toupper(Note)) ~ 'Repeat Encounter OFF',
-    #   Event_type == "Encounter START" ~ 'Encounter ON',
-    #   Event_type == "Encounter END & DATA" ~ 'Encounter OFF',
-    #   TRUE ~ Effort
-    # ),
-    # Permit = case_when(
-    #   grepl('DOC', Note) ~ 'DOC',
-    #   grepl('UO', Note) ~ 'UO',
-    #   TRUE ~ ''
-    # ))
+           across(where(is.character), ~na_if(., "")))
 
   #f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
@@ -308,8 +290,9 @@ observeEvent(input$photogo,{
   ## life history ##
   ##################
   
-  #fiordland_bottlenose.age_sex view
-  lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
+  #fiordland_bottlenose.life_history_ageclass
+  source('./scripts/connect to MySQL.R', local = TRUE)$value
+  lifehist<-dbReadTable(con, "life_history_ageclass")
   
   photo_counts<-allmerge_dt%>%
     filter(!grepl("\\?",ID_Name))%>%
@@ -325,17 +308,7 @@ observeEvent(input$photogo,{
     dplyr::rename("NAME" = "ID_Name")%>%
     filter(NAME != "" & !grepl('_',NAME) & !grepl('CULL',NAME) & NAME != "UNMA" & !str_detect(NAME, "^UK") & !str_detect(NAME, "\\?"))%>%
     tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR"), names_from = "Date", values_from = "n")%>%
-    arrange(NAME)%>%
-    mutate(year = as.numeric(phyear))%>%
-    mutate(SEX=replace(SEX, is.na(SEX), 'X'))%>%
-    mutate(AgeClass = case_when(
-      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) >= 9 ~ 'A',
-      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) < 1 ~ 'C',
-      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) < 9 & (year - BIRTH_YEAR) > 3 ~ 'S-A',
-      !is.na(BIRTH_YEAR) & (year - BIRTH_YEAR) >= 1 & (year - BIRTH_YEAR) <= 3 ~ 'W',
-       is.na(BIRTH_YEAR) & (year - FIRST_YEAR) >= 8 ~ 'A',
-      TRUE ~ 'U')
-    )
+    arrange(NAME)
   
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
@@ -591,7 +564,6 @@ sigmap<-ggplot()+
         filter(Year == max(Year))%>%
         filter(Sound == pharea)%>%
         mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
-      
       
       params<-list( tripdate_s = tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
                     nsurveydays = nsurveydays, recent = recent, older = older, 
