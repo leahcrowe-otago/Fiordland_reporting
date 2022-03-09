@@ -24,9 +24,9 @@ observeEvent(input$photogo,{
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
   } else {
-    # pharea = "Doubtful"
-    # phyear = 2022
-    # phmonth = '01'
+    # pharea = "Dusky"
+    # phyear = 2021
+    # phmonth = '10'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -53,6 +53,11 @@ observeEvent(input$photogo,{
   
   raw_tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
 
+  if (phyear < 2022){
+    raw_tracks<-raw_tracks%>%
+      dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
+  }
+  
   tracks<-as.data.frame(raw_tracks)%>%
     dplyr::select(DATE, TIME, LATITUDE, LONGITUDE)%>%
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
@@ -75,7 +80,8 @@ observeEvent(input$photogo,{
   f_data<-tracks%>%
     full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
     mutate(DATE = as.factor(DATE),
-           across(where(is.character), ~na_if(., "")))
+           across(where(is.character), ~na_if(., "")))%>%
+    arrange(Datetime)
 
   #f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
@@ -97,6 +103,7 @@ observeEvent(input$photogo,{
   
   sig_num<-f_data%>%
     filter(grepl("Encounter", Event_Type))%>%
+    arrange(Datetime)%>%
     mutate(signum = rep(1:(n()/2), each = 2))%>%
     dplyr::select(Datetime, DATE, signum, Effort, Event_Type, Encounter_Type, Permit)
   
