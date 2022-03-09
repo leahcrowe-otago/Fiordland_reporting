@@ -44,7 +44,7 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
   print(phyear)
   print(year(Sys.Date()))
   
-  lifehist<-assign_ageclass(lifehist)
+-  lifehist<-assign_ageclass(lifehist)
   
   lifehist<-lifehist%>%
     dplyr::select(-this_year_age, -this_year_age_est)
@@ -57,3 +57,6 @@ TYPES = list(SURVEY_AREA="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", 
              BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", DEATH_YEAR="varchar(4)") 
 
 lifehist_sql<-dbWriteTable(con, name = "life_history_ageclass", value = lifehist, field.types = TYPES, row.names = FALSE, overwrite = T)
+
+##once last_year is integrated, need to make some changes to the above so age class is only populated between birth/first and last  
+
