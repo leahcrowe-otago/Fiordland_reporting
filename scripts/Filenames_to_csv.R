@@ -1,10 +1,12 @@
 library(dplyr); library(exifr); library(stringr); library(lubridate)
 
-path<-"//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/Doubtful Sound Dolphin Monitoring/"
-year<-2020
-YYYY_MM<-'2020_11'
+#survey_area<-'Doubtful'
+survey_area<-'Dusky'
+path<-paste0("//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/",survey_area," Sound Dolphin Monitoring/")
+year<-2021
+month<-'02'
 
-fullpath<-paste0(path,year,"/",YYYY_MM,"/")
+fullpath<-paste0(path,year,"/",year,"_",month,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
 filenames<-sapply(folder.list, function (x) list.files(paste0(fullpath, x), pattern = c("*.jpg$|*.JPG$|*.NEF"), full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
@@ -39,5 +41,5 @@ photoperind<-metadata%>%
   #dplyr::select(Filename, Date, DateTime, Name, Part, Comments)%>%
   arrange(Filename)
 
-write.csv(photoperind, paste0('./data/Ind_per_photo_',YYYY_MM,'_',Sys.Date(),'.csv'), row.names = F)
+write.csv(photoperind, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'.csv'), row.names = F)
 
