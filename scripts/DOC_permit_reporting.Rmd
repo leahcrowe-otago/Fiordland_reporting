@@ -1,0 +1,67 @@
+---
+title: "IWC"
+author: "Leah Crowe"
+date: "3/15/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(odbc);library(dplyr);library(DBI);library(knitr)
+
+source('./connect to MySQL.R', local = TRUE)$value
+
+year = 2021
+lifehist<-dbReadTable(con, "life_history_ageclass")
+photo_analysis_calfyear<-dbReadTable(con, "photo_analysis_calfyear")
+ind_per_year<-dbReadTable(con, "ind_per_year")
+
+demo_permit_year<-lifehist%>%
+  dplyr::select(SURVEY_AREA, NAME, SEX, BIRTH_YEAR, ends_with(as.character(year)), ends_with(as.character(year+1)))%>%
+  dplyr::rename("AGECLASS1" = ends_with(as.character(year)), "AGECLASS2" = ends_with(as.character(year+1)))%>%
+  filter(AGECLASS2 != 'NA' & AGECLASS1 != 'D')
+
+peryear<-photo_analysis_calfyear%>%
+  distinct(SURVEY_AREA, YEAR, ID_NAME)%>%
+  mutate(permit_year = as.numeric(year))%>%
+  left_join(demo_permit_year, by = c("ID_NAME" = "NAME", "SURVEY_AREA"))%>%
+  mutate(AGECLASS = case_when(
+    permit_year < BIRTH_YEAR ~ AGECLASS2,
+    TRUE ~ AGECLASS1))%>%
+  mutate(AGECLASS = case_when(
+    AGECLASS != 'A' & AGECLASS != 'U' ~ 'J',
+    TRUE ~ AGECLASS
+  ))%>%
+  group_by(SURVEY_AREA, YEAR, SEX, AGECLASS)%>%
+  tally()%>%
+  ungroup()
+  
+peryear_age<-peryear%>%
+  dplyr::select(-SEX)%>%
+  group_by(SURVEY_AREA, YEAR, AGECLASS)%>%
+  summarise(n = sum(n))
+
+peryear_sex<-peryear%>%
+  dplyr::select(-AGECLASS)%>%
+  group_by(SURVEY_AREA, YEAR, SEX)%>%
+  summarise(n = sum(n))
+
+all_cat<-lifehist%>%
+  filter(FIRST_YEAR <= year)%>%
+  group_by(SURVEY_AREA)%>%
+  tally()
+
+```
+
+Table 2
+```{r cars}
+knitr::kable(peryear_age)
+
+knitr::kable(peryear_sex)
+```
+
+Table 3
+```{r pressure, echo=FALSE}
+knitr::kable(all_cat)
+```
+
+
