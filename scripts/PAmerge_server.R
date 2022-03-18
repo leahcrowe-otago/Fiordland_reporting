@@ -22,11 +22,12 @@ observeEvent(input$photogo,{
   #print(phfile)
 
   if(pharea == "Other"){
-    phareafile = 'Other Fiords/'
+    other_fiord<-input$otherfiord
+    phareafile = paste0('Other Fiords/',other_fiord,'/')
   } else {
-    # pharea = "Dusky"
-    # phyear = 2021
-    # phmonth = '10'
+    # pharea = "Doubtful"
+    # phyear = 2022
+    # phmonth = '01'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -69,15 +70,30 @@ observeEvent(input$photogo,{
     mutate(rank = rank(Datetime, ties.method = "first"))%>%
     filter(rank == 1)%>%
     dplyr::select(-rank)
-  print(nrow(tracks))
+  
   #find nearest position for time changes
 
   data.table::setDT(sigs)[,  Latitude := data.table::setDT(tracks)[sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
   data.table::setDT(sigs)[,  Longitude := data.table::setDT(tracks)[sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
   
   sigs%>%as.data.frame()
-  #filter tracks to only between on/off effort      
-  f_data<-tracks%>%
+  
+  #filter tracks to only between on/off effort  
+  
+  ##get bin list using seq for every 10 seconds
+  ##order by DateTime and rank
+  tracksrank<- tracks %>% 
+    mutate(tracksbin = cut(tracks$Datetime, breaks = c(seq(from = tracks$Datetime[1], to = tracks$Datetime[nrow(tracks)], by = 10)))) %>%
+    arrange(Datetime, tracksbin) %>% 
+    group_by(tracksbin) %>% 
+    mutate(rank=rank(Datetime, ties.method = "first"))%>% 
+    filter(rank == 1)%>%
+    ungroup()%>%
+    dplyr::select(-tracksbin, -rank)
+  
+  print(nrow(tracksrank))
+  
+  f_data<-tracksrank%>%
     full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
     mutate(DATE = as.factor(DATE),
            across(where(is.character), ~na_if(., "")))%>%
@@ -88,18 +104,27 @@ observeEvent(input$photogo,{
   
   onoffeffort<-f_data%>%
     filter(grepl('Effort',Effort))%>%
-    group_by(DATE)%>%
+    distinct(DATE, Datetime)%>%
+    #ungroup()%>%
+    mutate(Event = as.numeric(rep(1:(n()/2),each = 2)))%>%
+    group_by(Event)%>%
     mutate(min = min(Datetime),
       max = max(Datetime))%>%
-    distinct(DATE, min, max)%>%
+    dplyr::select(-Datetime)%>%
+    distinct()%>%  
     as.data.frame()
   
   f_data<-f_data%>%
-    left_join(onoffeffort, by = 'DATE')%>%
-    filter(Datetime >= min & Datetime <= max)%>%
     left_join(Event)
   
   f_data$Event<-zoo::na.locf(f_data$Event, na.rm = FALSE)
+  nrow(f_data)
+  
+  f_data<-f_data%>%
+    left_join(onoffeffort, by = c('Event','DATE'))%>% 
+    filter(Datetime >= min & Datetime <= max)%>%
+    as.data.frame()
+  nrow(f_data)
   
   sig_num<-f_data%>%
     filter(grepl("Encounter", Event_Type))%>%
@@ -109,6 +134,7 @@ observeEvent(input$photogo,{
   
   f_data$Effort[f_data$Effort==""] <- NA
   f_data$Encounter_Type[f_data$Encounter_Type==""] <- NA
+  print(nrow(f_data))
   
   f_data<-f_data%>%dplyr::select(-Encounter_Type)%>%
     left_join(sig_num, by = c("Datetime", "DATE","Event_Type", "Effort","Permit"))%>% 
@@ -126,6 +152,8 @@ observeEvent(input$photogo,{
 
   sig_days<-sig_num%>%
     distinct(DATE)
+  
+  nrow(f_data)
   
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
@@ -299,7 +327,21 @@ observeEvent(input$photogo,{
   
   #fiordland_bottlenose.life_history_ageclass
   source('./scripts/connect to MySQL.R', local = TRUE)$value
+  source('./scripts/life_history_ageclass update.R', local = TRUE)$value
   lifehist<-dbReadTable(con, "life_history_ageclass")
+  
+  if (as.numeric(phmonth) >= 9){
+   lhyear = phyear + 1
+  } else {
+    lhyear = phyear
+  }
+  #complicated life history related to when the survey occurs
+  #could be better defined by month of last sig to determine what "dolphin" year we are dealing with
+  lifehist<-lifehist%>%
+    dplyr::select(SURVEY_AREA, NAME, SEX, FIRST_YEAR, BIRTH_YEAR, LAST_YEAR, LAST_DATE, ends_with(as.character(lhyear)))%>%
+    filter(across(last_col()) != 'NA' & across(last_col()) != 'D')
+  
+  names(lifehist)[length(names(lifehist))]<-"AgeClass" 
   
   photo_counts<-allmerge_dt%>%
     filter(!grepl("\\?",ID_Name))%>%
@@ -314,7 +356,7 @@ observeEvent(input$photogo,{
     left_join(lifehist, by = c("ID_Name" = "NAME"))%>%
     dplyr::rename("NAME" = "ID_Name")%>%
     filter(NAME != "" & !grepl('_',NAME) & !grepl('CULL',NAME) & NAME != "UNMA" & !str_detect(NAME, "^UK") & !str_detect(NAME, "\\?"))%>%
-    tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR"), names_from = "Date", values_from = "n")%>%
+    tidyr::pivot_wider(id_cols = c("NAME","SEX","BIRTH_YEAR","FIRST_YEAR","AgeClass"), names_from = "Date", values_from = "n")%>%
     arrange(NAME)
   
   trip_cap<-daily_cap%>%
@@ -361,7 +403,7 @@ observeEvent(input$photogo,{
   disco<-function(x){
     x<-daily_cap
     freqcap<-x%>%
-      dplyr::select(-NAME, -SEX, -BIRTH_YEAR,-FIRST_YEAR,-AgeClass, -year)%>%
+      dplyr::select(-NAME, -SEX, -BIRTH_YEAR,-FIRST_YEAR,-AgeClass)%>%
       as.data.frame()
     
     ##add all sample days where dolphins were not sighted
@@ -386,11 +428,12 @@ observeEvent(input$photogo,{
   
   disco_data<-disco(daily_cap)
   
-  onoffeffort$DATE<-ymd(onoffeffort$DATE)
+  #onoffeffort$DATE<-ymd(onoffeffort$DATE)
+  disco_data$date<-ymd(disco_data$date)
   
-  disco_data<-disco_data%>%
-    left_join(onoffeffort, by = c('date' = 'DATE'))%>%
-    dplyr::select(-min, -max)
+  #disco_data<-disco_data%>%
+   # left_join(onoffeffort, by = c('date' = 'DATE'))%>%
+   #dplyr::select(-min, -max, Event)
   
   disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
     geom_line()+
@@ -415,14 +458,14 @@ observeEvent(input$photogo,{
   #this section is a place holder until the database is complete
   ##Capture history from Excel spreadsheet##
   
-  if (pharea == 'Dusky'){
-  caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
-  } else if (pharea == 'Doubtful'){
-  caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)
-  }
+  # if (pharea == 'Dusky'){
+  # caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
+  # } else if (pharea == 'Doubtful'){
+  # caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)
+  # }
   
   thistrip<-daily_cap%>%
-    dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass, -year)%>%
+    dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass)%>%
     tidyr::pivot_longer(!(c(NAME)),names_to = "Date")%>%
     mutate(Date = lubridate::ymd(Date))%>%
     filter(value != 0)
@@ -430,35 +473,25 @@ observeEvent(input$photogo,{
   thistrip_names<-thistrip%>%distinct(NAME)%>%as.data.frame()
   
   print('365')
-  all_first_last<-caphist%>%
-    tidyr::pivot_longer(!(c(Entry,NAME)),names_to = "Date")%>%
-    filter(value != 0)%>%
-    mutate(Date = lubridate::dmy(substr(str_replace_all(Date,"\\.","-"),2,9)))%>%
-    dplyr::select(NAME, Date, value)%>%
-    bind_rows(thistrip)%>%
-    group_by(NAME)%>%
-    mutate(first_date = min(Date),
-           last_date = max(Date),
-           NAME = toupper(NAME))%>%
-    distinct(NAME,first_date,last_date)%>%
-    filter(!is.na(NAME))%>%
-    arrange(NAME)%>%
-    left_join(lifehist, by = "NAME")%>%
-    mutate(year = as.numeric(phyear))%>%
-    mutate(AgeClass = case_when(
-      year - FIRST_YEAR > 3 ~ "A",
-      year - BIRTH_YEAR < 1 ~ "C",
-      !is.na(BIRTH_YEAR) & year - BIRTH_YEAR <= 3 & year - BIRTH_YEAR > 0 ~ "J",
-      TRUE ~ "U"
-    ))
+  # all_first_last<-caphist%>%
+  #   tidyr::pivot_longer(!(c(Entry,NAME)),names_to = "Date")%>%
+  #   filter(value != 0)%>%
+  #   mutate(Date = lubridate::dmy(substr(str_replace_all(Date,"\\.","-"),2,9)))%>%
+  #   dplyr::select(NAME, Date, value)%>%
+  #   bind_rows(thistrip)%>%
+  #   group_by(NAME)%>%
+  #   mutate(first_date = min(Date),
+  #          last_date = max(Date),
+  #          NAME = toupper(NAME))%>%
+  #   distinct(NAME,first_date,last_date)%>%
+  #   filter(!is.na(NAME))%>%
+  #   arrange(NAME)%>%
+  #   dplyr::left_join(lifehist, by = "NAME")
   
-  all_first_last$DEATH_YEAR<-as.numeric(all_first_last$DEATH_YEAR)
-  
-  unseen_two_years<-all_first_last%>%
+  unseen_two_years<-lifehist%>%
     anti_join(thistrip_names)%>%
-    filter(is.na(DEATH_YEAR))%>%
-    filter(last_date < max(as.Date(onoffeffort$DATE)) - lubridate::years(1) & last_date >= max(as.Date(onoffeffort$DATE)) - lubridate::years(2))%>%
-    mutate(LAST_YEAR = lubridate::year(last_date))%>%
+    filter(LAST_DATE < max(as.Date(onoffeffort$DATE)) - lubridate::years(1) & LAST_DATE >= max(as.Date(onoffeffort$DATE)) - lubridate::years(2))%>%
+    mutate(LAST_YEAR = lubridate::year(LAST_DATE))%>%
     mutate(NameSex = case_when(
       nchar(NAME) > 2 ~ paste0(str_to_title(NAME)," (",SEX,")"),
       nchar(NAME) <= 2 ~ paste0(NAME," (",SEX,")")))
@@ -505,8 +538,7 @@ effmap<-ggplot()+
   scale_color_viridis_d(name = "Date")+
   xlab("Longitude")+
   ylab("")+
-  theme(legend.position = "none",
-        axis.text.y=element_blank())
+  theme(axis.text.y=element_blank())
 
 sigmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
@@ -517,7 +549,8 @@ sigmap<-ggplot()+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
   xlab("Longitude")+
-  ylab("Latitude")
+  ylab("Latitude")+
+  theme(legend.position = "none")
   
   print("mapping")
   
@@ -556,8 +589,8 @@ sigmap<-ggplot()+
       tempReport<-file.path("./scripts/FBD summary template.Rmd")
       file.copy("FBD summary template.Rmd", tempReport, overwrite = FALSE)
  
-      tripdate_s<-format(min(onoffeffort$DATE), "%d %b %Y")
-      tripdate_e<-format(max(onoffeffort$DATE), "%d %b %Y")
+      tripdate_s<-format(min(ymd(onoffeffort$DATE)), "%d %b %Y")
+      tripdate_e<-format(max(ymd(onoffeffort$DATE)), "%d %b %Y")
       loc_base<-paste0(pharea,"/",input$locbase)
       nsurveydays<-nrow(f_data%>%distinct(Date))
       vessel<-input$vessel
