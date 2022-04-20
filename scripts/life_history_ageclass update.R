@@ -1,16 +1,17 @@
-library(odbc);library(dplyr);library(DBI)
+library(odbc);library(dplyr);library(DBI);library(lubridate)
 
 source('./scripts/connect to MySQL.R', local = TRUE)$value
 #lifehist<-dbReadTable(con, "age_sex")
 
 assign_ageclass<-function(x){
-  x%>%mutate(
+  x%>%
+  mutate(
   this_year_age = case_when(
     (!is.na(BIRTH_YEAR) | BIRTH_YEAR != '') ~ as.numeric(phyear) - as.numeric(BIRTH_YEAR)),
   this_year_age_est = case_when(
     (is.na(BIRTH_YEAR) | BIRTH_YEAR == '') ~ as.numeric(phyear) - as.numeric(FIRST_YEAR)),
   this_year_ageclass = case_when(
-    (this_year_age >= 9 | this_year_age_est >= 8) ~ 'A',
+    (this_year_age >= 9 | this_year_age_est >= 8 | phyear >= FIRST_CALF) ~ 'A',
     (this_year_age < 9 & this_year_age >= 3) ~ 'S-A',
     (this_year_age < 3 & this_year_age > 0) ~ 'W',
     this_year_age == 0 ~ 'C',
@@ -34,6 +35,8 @@ last<-pa_cy%>%
 phyear = min(lifehist_sql$FIRST_YEAR)
 print(phyear)
 
+mom_first_year<-lifehist_sql%>%filter(MOM != "")%>%group_by(MOM)%>%dplyr::summarise(FIRST_CALF = min(BIRTH_YEAR))
+lifehist_sql<-lifehist_sql%>%left_join(mom_first_year, by = c("NAME" = "MOM"))
 lifehist<-assign_ageclass(lifehist_sql)
 lifehist$DEATH_YEAR[lifehist$DEATH_YEAR==""] <- NA
 
@@ -42,7 +45,7 @@ lifehist%>%filter(NAME == "NANCY")
 lifehist%>%filter(NAME == "CORKSCREW")
 
 lifehist<-lifehist%>%
-  mutate(SURVEY_AREA = case_when(
+  mutate(POD = case_when(
     ENTRYNO < 2000 ~ 'DOUBTFUL',
     ENTRYNO >= 2000 & ENTRYNO < 3000 ~ 'DUSKY'))%>%
   left_join(last, by = c("NAME" = "ID_NAME"))%>%
@@ -50,7 +53,7 @@ lifehist<-lifehist%>%
     !is.na(DEATH_YEAR) ~ as.character(DEATH_YEAR),
     TRUE ~ LAST_YEAR
   ))%>%
-  dplyr::select(SURVEY_AREA, NAME, CODE, SEX, MOM, BIRTH_YEAR, FIRST_YEAR, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
+  dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
 
 names(lifehist)[length(names(lifehist))]<-phyear
 
@@ -70,7 +73,8 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
   lifehist
 }
 
-TYPES = list(SURVEY_AREA="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",
+
+TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",FIRST_CALF="varchar(4)",
              BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", LAST_DATE="varchar(10)") 
 
 lifehist_sql<-dbWriteTable(con, name = "life_history_ageclass", value = lifehist, field.types = TYPES, row.names = FALSE, overwrite = T)
