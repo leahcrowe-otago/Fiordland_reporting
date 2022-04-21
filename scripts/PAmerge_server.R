@@ -15,19 +15,20 @@ observeEvent(input$photogo,{
   phyear<-input$photoyear
   phmonth<-input$photomonth
   pharea<-input$areainput
-  
+  ofiords<-input$otherfiord
+  print(ofiords)
   #override<-NULL
   #print(phserv)
   #print(phyear)
   #print(phfile)
 
+  # pharea = "Other"
+  # phyear = 2022
+  # phmonth = '02'
+  
   if(pharea == "Other"){
-    other_fiord<-input$otherfiord
-    phareafile = paste0('Other Fiords/',other_fiord,'/')
+    phareafile = 'Other Fiords/'
   } else {
-    # pharea = "Doubtful"
-    # phyear = 2022
-    # phmonth = '01'
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
   
@@ -35,7 +36,10 @@ observeEvent(input$photogo,{
       pathway<-paste0('//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland bottlenose dolphin/Long Term Monitoring/')
       } else if (phserv == 'Local'){
       pathway<-input$filepathinput
+      #pathway<-"C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/"
       }
+  
+
   
   pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
   print(pathimage)
@@ -119,6 +123,7 @@ observeEvent(input$photogo,{
   
   f_data$Event<-zoo::na.locf(f_data$Event, na.rm = FALSE)
   nrow(f_data)
+  unique(f_data$Event)
   
   f_data<-f_data%>%
     left_join(onoffeffort, by = c('Event','DATE'))%>% 
@@ -143,7 +148,7 @@ observeEvent(input$photogo,{
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Repeat', 'Repeat')) %>% 
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Follow', 'Follow')) %>% 
     ungroup() %>%
-    dplyr::select(Datetime, DATE, TIME, LATITUDE, LONGITUDE, Effort, Event_Type, Encounter_Type, Crew, signum,
+    dplyr::select(Datetime, DATE, TIME, LATITUDE, LONGITUDE, Effort, Event_Type, Encounter_Type, Deployment, Crew, signum,
                   Species, Group_Size, Calves, Behaviours, Permit,
                   Beaufort, Swell, Glare, Visibility, Overall, SST, Depth, Note, Event, Tawaki, -grp)%>%
     dplyr::rename(Date = DATE, Time = TIME, Latitude = LATITUDE, Longitude = LONGITUDE, Sighting_Number = signum)
@@ -156,7 +161,7 @@ observeEvent(input$photogo,{
   nrow(f_data)
   
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
-  write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
+  write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",pharea,".csv"), row.names = F, na = "")
   print(nrow(f_data))
   
   incProgress(3/5)
@@ -196,7 +201,11 @@ observeEvent(input$photogo,{
     dplyr::summarise(Total_time_dist = round(sum(Total_time, na.rm = TRUE)/60,1))%>%
     ungroup()%>%
     tidyr::pivot_wider(distance, names_from = Permit, values_from = Total_time_dist)%>%
-    mutate(total_wTt = DOC + Otago)
+    replace(is.na(.), 0)%>%
+    mutate(`DOC permit` = if (exists('DOC permit', where=.)) `DOC permit` else 0)%>%
+    mutate(`Otago permit` = if (exists('Otago permit', where=.)) `Otago permit` else 0)%>%
+    mutate(total_wTt = `DOC permit` + `Otago permit`)%>%
+    dplyr::rename("DOC" = `DOC permit`, "Otago" = `Otago permit`)
   
   ####################
   ## Photo analysis ##
@@ -218,6 +227,7 @@ observeEvent(input$photogo,{
   nrow(PA_merge[[1]])
   #nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
+  head(allmerge)
   nrow(allmerge)
   allmerge$Date<-ymd(allmerge$Date)
   allmerge<-allmerge%>%
@@ -231,11 +241,11 @@ observeEvent(input$photogo,{
   folder.list<-list.files(pathimage, pattern = paste0("^",phyear), full.names = T)
   filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
   filenames_unlist<-unlist(filenames, use.names = F)
-  
-  allphotod_df<-data.frame(fullfilename = filenames_unlist,
+  head(filenames_unlist)
+  allphotod_df<-data.frame(fullfilename = as.vector(filenames_unlist),
              filename = basename(filenames_unlist),
              date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
-
+  head(allphotod_df)
   #allphotod_df%>%filter(grepl('DSC',filename))
   
   PA_fn_error<-allphotod_df%>%
@@ -338,8 +348,12 @@ observeEvent(input$photogo,{
   #complicated life history related to when the survey occurs
   #could be better defined by month of last sig to determine what "dolphin" year we are dealing with
   lifehist<-lifehist%>%
-    dplyr::select(SURVEY_AREA, NAME, SEX, FIRST_YEAR, BIRTH_YEAR, LAST_YEAR, LAST_DATE, ends_with(as.character(lhyear)))%>%
+    dplyr::select(POD, NAME, SEX, FIRST_YEAR, BIRTH_YEAR, LAST_YEAR, LAST_DATE, ends_with(as.character(lhyear)))%>%
     filter(across(last_col()) != 'NA' & across(last_col()) != 'D')
+  
+  if (pharea != "Other"){
+    lifehist<-lifehist%>%filter(POD == toupper(pharea))
+  }
   
   names(lifehist)[length(names(lifehist))]<-"AgeClass" 
   
@@ -349,7 +363,7 @@ observeEvent(input$photogo,{
     group_by(Date, ID_Name)%>%
     tally()
   
-  print('259')
+  print('356')
   daily_cap<-photo_counts%>%
     ungroup()%>%
     mutate_if(is.numeric, ~1 * (. > 0))%>%
@@ -362,7 +376,7 @@ observeEvent(input$photogo,{
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
   trip_cap%>%filter(AgeClass == 'W')%>%as.data.frame()
-  print('277')
+  print('369')
   age_sex_table<-trip_cap%>%
     dplyr::select(-NAME)%>%
     group_by(SEX, AgeClass)%>%
@@ -537,8 +551,9 @@ effmap<-ggplot()+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
   xlab("Longitude")+
-  ylab("")+
-  theme(axis.text.y=element_blank())
+  ylab("Latitude")+
+  guides(color = guide_legend(override.aes = list(size = 2)))+
+  theme(axis.text.x = element_text(angle = 90))
 
 sigmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
@@ -549,8 +564,10 @@ sigmap<-ggplot()+
   theme_bw()+
   scale_color_viridis_d(name = "Date")+
   xlab("Longitude")+
-  ylab("Latitude")+
-  theme(legend.position = "none")
+  ylab("")+
+  theme(axis.text.y=element_blank())+
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90))
   
   print("mapping")
   
@@ -560,20 +577,25 @@ sigmap<-ggplot()+
     sigmap<-sigmap+
       coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
     h = 100
+    w1 = 1.15
   } else if (pharea == "Doubtful"){
     effmap<-effmap+
       coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)
     sigmap<-sigmap+
       coord_sf(xlim = c(166.8,167.2), ylim = c(-45.5,-45.15), crs = 4269)
     h = 100
+    w1 = 1.15
   } else {
     effmap<-effmap+
       coord_sf(xlim = c(min(f_data$Longitude),max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
     sigmap<-sigmap+
       coord_sf(xlim = c(min(f_data$Longitude),max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
+    h = 100
+    w1 = 1
+  
   }
   
-  map<-ggpubr::ggarrange(sigmap, effmap, common.legend = T, legend = "bottom", widths = c(1.15,1), labels = 'auto')
+  map<-ggpubr::ggarrange(effmap, sigmap, common.legend = T, legend = "bottom", widths = c(w1,1), labels = 'auto')
   
   ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = h, units = 'mm')
   incProgress(5/5)
@@ -582,18 +604,36 @@ sigmap<-ggplot()+
 
  output$report<-downloadHandler(
    
-   filename = paste0("FBD_monitoring_report_",phyear,"_",phmonth,".pdf"),
+   filename = paste0("FBD_monitoring_report_",phyear,"_",phmonth,"_",pharea,".pdf"),
    
    content = function(file) {
      
+     if(pharea == "Other"){
+      tempReport<-file.path("./scripts/FBD summary template_other.Rmd")
+      file.copy("FBD summary template_other.Rmd", tempReport, overwrite = FALSE)  
+     } else {
       tempReport<-file.path("./scripts/FBD summary template.Rmd")
       file.copy("FBD summary template.Rmd", tempReport, overwrite = FALSE)
- 
+     }
+     
       tripdate_s<-format(min(ymd(onoffeffort$DATE)), "%d %b %Y")
       tripdate_e<-format(max(ymd(onoffeffort$DATE)), "%d %b %Y")
       loc_base<-paste0(pharea,"/",input$locbase)
+      if(grepl("Doubtful",loc_base) == TRUE){
+        loc_base<-paste0("Patea-",pharea," complex/",input$locbase)
+      } else if (grepl("Dusky", loc_base) == TRUE){
+        loc_base<-paste0("Tamatea-",pharea," complex/",input$locbase)
+      } else {
+        print(ofiords)
+        print(as.list(ofiords))
+        loc_base<-stringi::stri_replace_last(do.call("paste", c(as.list(ofiords), sep = ", ")), fixed = ",", ", and")
+        loc_base<-paste0(loc_base,"/",input$locbase)
+      }
       nsurveydays<-nrow(f_data%>%distinct(Date))
       vessel<-input$vessel
+      if(grepl('Southern Winds',loc_base) == TRUE & vessel != "Southern Winds"){
+        vessel<-paste0(vessel,"/Southern Winds")
+      }
       crew<-stringr::str_c(input$crew, "\\linebreak", collapse = " ")
       crew<-substr(crew,1,nchar(crew)-10)
       wx_comments<-input$wx_comments
@@ -602,7 +642,7 @@ sigmap<-ggplot()+
       
       pop_est<-read.csv('./data/FBD_popest.csv', header = T)%>%
         filter(Year == max(Year))%>%
-        filter(Sound == pharea)%>%
+        filter(Pod == pharea)%>%
         mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
       
       params<-list( tripdate_s = tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
