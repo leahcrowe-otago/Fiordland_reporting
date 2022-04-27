@@ -2,15 +2,15 @@ library(dplyr); library(exifr); library(stringr); library(lubridate)
 
 survey_area<-'Doubtful'
 #survey_area<-'Dusky'
-#survey_area<-'Dagg Sound'
+#survey_area<-'Nancy Sound'
 if (survey_area == 'Doubtful' | survey_area == 'Dusky'){
   fiord_path<-paste0(survey_area," Sound Dolphin Monitoring/")
 } else {
-  fiord_path<-paste0('/Other Fiords/',survey_area,'/')
+  fiord_path<-paste0('Other Fiords/',survey_area,'/')
 }
 path<-paste0("//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/",fiord_path)
-year<-2006
-month<-'10'
+year<-2018
+month<-'06'
 
 fullpath<-paste0(path,year,"/",year,"_",month,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
@@ -22,9 +22,9 @@ metadata<-exifr::read_exif(filenames_unlist, tags = c("filename", "DateTimeOrigi
 ############
 ##this finds ands
 and<-metadata%>%
-  mutate(FileName = str_replace(FileName, "with","and"))%>%
+  mutate(FileName = str_replace(tolower(FileName), "with","and"))%>%
   mutate(FileName = str_replace(FileName, "&","and"))%>%
-  filter(grepl(' and ',FileName))%>%
+  filter(grepl(' and ',tolower(FileName)))%>%
   mutate(FileName = str_replace(FileName, " '",""),
          Name = toupper(stringr::word(FileName, 3)),
          Comments = "")
@@ -46,11 +46,11 @@ photoperind<-metadata%>%
            TRUE ~ Part
          ))%>%
   #dplyr::select(Filename, Date, DateTime, Name, Part, Comments)%>%
-  arrange(Filename)%>%
   mutate(SURVEY_AREA = toupper(survey_area),
          TRIP = paste0(year,"_",month), 
          Group = '',
          Photographer = '')%>%
-  dplyr::select(SURVEY_AREA, TRIP, Date, Filename, DateTime, Name, Part, Group, Photographer, Comments, SourceFile, FileName, DateTimeOriginal)
+  dplyr::select(SURVEY_AREA, TRIP, Date, Filename, DateTime, Name, Part, Group, Photographer, Comments, SourceFile, FileName, DateTimeOriginal)%>%
+  arrange(DateTime, Filename)
 
 write.csv(photoperind, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'.csv'), row.names = F)
