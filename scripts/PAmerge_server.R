@@ -22,7 +22,7 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 
-  # pharea = "Other"
+  # pharea = "Dusky"
   # phyear = 2022
   # phmonth = '02'
   
@@ -38,8 +38,6 @@ observeEvent(input$photogo,{
       pathway<-input$filepathinput
       #pathway<-"C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/"
       }
-  
-
   
   pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
   print(pathimage)
@@ -282,8 +280,11 @@ observeEvent(input$photogo,{
     left_join(metadata2, by = c("Filename", "Date"))%>%
     mutate(ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
                                grepl("JOLLY", ID_Name) ~ "JOLLY-GOOD",
-                               TRUE ~ ID_Name),
-           Survey_Area = toupper(pharea))
+                               TRUE ~ ID_Name))
+  if(pharea != "Other"){
+    allmerge_dt<-allmerge%>%
+      mutate(Survey_Area = toupper(pharea))
+  }
   
   incProgress(2/5)
   
@@ -317,14 +318,19 @@ observeEvent(input$photogo,{
       ))%>%
       filter(!is.na(Group))%>%
       dplyr::select(-Sighting_Number, -max, -min)%>%
-      distinct()
+      distinct()%>%
+      arrange(Datetime)
     
     nogroup<-allmerge_dt%>%
-      anti_join(allmerge_dt_group)
+      anti_join(allmerge_dt_group)%>%
+      filter(is.na(Group))
     
     allmerge_dt_group<-allmerge_dt_group%>%
       bind_rows(nogroup)%>%
-      arrange(Datetime)
+      arrange(Datetime)%>%
+      mutate(TRIP = paste0(phyear,"_",phmonth))
+    
+    nrow(allmerge_dt_group)
     
     write.csv(allmerge_dt_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
     
@@ -587,9 +593,9 @@ sigmap<-ggplot()+
     w1 = 1.15
   } else {
     effmap<-effmap+
-      coord_sf(xlim = c(min(f_data$Longitude),max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
+      coord_sf(xlim = c(min(f_data$Longitude)-0.2,max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
     sigmap<-sigmap+
-      coord_sf(xlim = c(min(f_data$Longitude),max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
+      coord_sf(xlim = c(min(f_data$Longitude)-0.2,max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
     h = 100
     w1 = 1
   
