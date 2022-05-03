@@ -1,26 +1,31 @@
 ---
-geometry: margin=1.5cm
+geometry: margin=1.37cm
 output: pdf_document
 ---
 
   
-```{r dolphin_loop, echo=FALSE, message=FALSE}
+```{r dolphin_loop, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 library(dplyr)
 library(ggplot2)
 library(glue)
 library(stringr)
 library(lubridate)
 
-#area<-"Doubtful"
-area<-"Dusky"
+area<-"Doubtful"
+#area<-"Dusky"
 
-lifehist<-read.csv('./data/FBD_lifehistory.csv', header = T, stringsAsFactors = F)
-LASTYEARAGE<-(lifehist[9])
+source('./scripts/connect to MySQL.R', local = TRUE, verbose = F)$value
+source('./scripts/life_history_ageclass update.R', local = TRUE, verbose = F)$value
+lifehist<-dbReadTable(con, "life_history_ageclass")
+
+LASTYEARAGE<-(lifehist[ncol(lifehist)])
 names(LASTYEARAGE)<-c("LASTYEAR_AGE")
 lifehist<-lifehist%>%
     mutate(LASTYEAR_AGE = LASTYEARAGE$LASTYEAR_AGE)%>%
-    filter(SURVEY_AREA == area)
+    filter(POD == toupper(area))
     
+lifehist$MOM[lifehist$MOM==""] <- NA
+
 folder.list<-list.files(paste0('./catalogue/',area,'_Sound'), full.names = T)
 filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
@@ -38,7 +43,7 @@ photo_df<-photo_df%>%
 #########
 
 multiplot <- function(dolphin_name){
-  #dolphin_name = "210528UK01"
+  #dolphin_name = "ALYSA"
   cat(glue::glue("#### {dolphin_name}  \n \n"))
   
   photo_per_dolphin <- photo_df %>% 
@@ -47,14 +52,15 @@ multiplot <- function(dolphin_name){
 
   lh_dolphin <- lifehist %>% 
     filter(as.character(NAME) == dolphin_name)
-  
+
   if (nrow(lh_dolphin) == 0){
     lh_dolphin = data.frame(CODE = "",
                             SEX = "",
                             LASTYEAR_AGE = "",
                             MOM = "",
                             BIRTH_YEAR = "",
-                            FIRST_YEAR = "")
+                            FIRST_YEAR = "",
+                            LAST_YEAR = "")
   }
   
   if ('F' %in% lh_dolphin$SEX){
@@ -69,14 +75,14 @@ multiplot <- function(dolphin_name){
   calves_sent<-glue_collapse(calves$NAME, ", ", last = " and ")
   
   cat(
-    glue::glue("\n ID code: {lh_dolphin$CODE} | sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM}  | birth yr: {lh_dolphin$BIRTH_YEAR} |  first yr: {lh_dolphin$FIRST_YEAR} | last yr: 
+    glue::glue("\n ID code: {lh_dolphin$CODE} | sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM}  | birth yr: {lh_dolphin$BIRTH_YEAR} |  first yr: {lh_dolphin$FIRST_YEAR} | last yr: {lh_dolphin$LAST_YEAR}
     \n calves: {calves_sent}")
   )
   
   } else {
     
   cat(
-    glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: ")
+    glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: {lh_dolphin$LAST_YEAR}")
   )
     
   }
@@ -157,23 +163,43 @@ if (area == "Dusky"){
   
 if (area == "Doubtful"){  
   
-  if (dolphin_name == "CHIP"){
+  if (dolphin_name == "BOBA"){
     cat("\n\\newpage\n")
   }
 
-  if (dolphin_name == "DANGER"){
+  if (dolphin_name == "CORKSCREW"){
     cat("\n\\newpage\n")
   }
 
-  if (dolphin_name == "MAKO"){
+  if (dolphin_name == "FRISBEE"){
     cat("\n\\newpage\n")
   }
 
-  if (dolphin_name == "PL"){
+  if (dolphin_name == "MENTRY"){
     cat("\n\\newpage\n")
   }
 
-  if (dolphin_name == "SHMEE"){
+  if (dolphin_name == "POOH"){
+    cat("\n\\newpage\n")
+  }
+  
+  if (dolphin_name == "VORTEX"){
+    cat("\n\\newpage\n")
+    }
+  
+  if (dolphin_name == "MUS"){
+    cat("\n\\newpage\n")
+  }
+  
+  if (dolphin_name == "PIGLET"){
+    cat("\n\\newpage\n")
+  }
+  
+  if (dolphin_name == "SEAL"){
+    cat("\n\\newpage\n")
+  }
+  
+    if (dolphin_name == "UPBANG"){
     cat("\n\\newpage\n")
   }
   
