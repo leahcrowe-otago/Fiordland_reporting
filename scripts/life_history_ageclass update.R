@@ -18,7 +18,7 @@ assign_ageclass<-function(x){
     TRUE ~ 'U'))%>%
   mutate(this_year_ageclass = case_when(
     as.numeric(phyear) < as.numeric(FIRST_YEAR) | as.numeric(phyear) < as.numeric(BIRTH_YEAR) ~ 'NA',
-    as.numeric(phyear) > as.numeric(DEATH_YEAR) ~ 'D',
+    as.numeric(phyear) >= as.numeric(DEATH_YEAR) ~ 'D',
     TRUE ~ this_year_ageclass
   ))
 }
@@ -30,7 +30,7 @@ pa_cy<-dbReadTable(con, "photo_analysis_calfyear")
 
 last<-pa_cy%>%
   group_by(ID_NAME)%>%
-  dplyr::summarise(LAST_YEAR = as.character(max(CALFYEAR)), LAST_DATE = as.character(max(DATE)))
+  dplyr::summarise(LAST_YEAR = as.character(max(CALFYEAR)), LAST_DATE = as.character(max(DATE)), FIRST_DATE = as.character(min(DATE)))
 
 phyear = min(lifehist_sql$FIRST_YEAR)
 print(phyear)
@@ -53,7 +53,7 @@ lifehist<-lifehist%>%
     !is.na(DEATH_YEAR) ~ as.character(DEATH_YEAR),
     TRUE ~ LAST_YEAR
   ))%>%
-  dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
+  dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, FIRST_DATE, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
 
 names(lifehist)[length(names(lifehist))]<-phyear
 
@@ -75,7 +75,8 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
 
 
 TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",FIRST_CALF="varchar(4)",
-             BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", LAST_DATE="varchar(10)") 
+             BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", FIRST_DATE="varchar(10)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", 
+             LAST_DATE="varchar(10)") 
 
 lifehist_sql<-dbWriteTable(con, name = "life_history_ageclass", value = lifehist, field.types = TYPES, row.names = FALSE, overwrite = T)
 
