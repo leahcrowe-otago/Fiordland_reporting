@@ -8,9 +8,11 @@ fluidPage(
       textInput("photoyear","Year (YYYY)"),
       textInput("photomonth","Month (MM)"),
       radioButtons("areainput", "Area monitored", choices = c("Doubtful","Dusky","Milford","Other"), selected = "Doubtful", inline = FALSE), 
-      selectInput("otherfiord","Other fiords surveyed:", c("Taiporoporo-Charles" = "Taiporoporo-Charles Sound",
+      selectInput("otherfiord","Fiords surveyed:", c("Taiporoporo-Charles" = "Taiporoporo-Charles Sound",
                                                            "Hinenui-Nancy" = "Hinenui-Nancy Sound",
-                                                           "Te R\u101Dagg" = "Te R\u101-Dagg Sound",
+                                                           "Patea-Doubtful" = "Patea-Doubtful complex",
+                                                           "Te Ra-Dagg" = "Te R\u101-Dagg Sound",
+                                                           "Tamatea-Dusky" = "Tamatea-Dusky complex",
                                                            "Taiari-Chalky" = "Taiari-Chalky Inlet",
                                                            "Rakituma-Preservation" = "Rakituma-Preservation Inlet"), multiple = T),
       radioButtons("EXIF", "collect EXIF data, or load file?", choices = c("collect","load"), selected = "load", inline = FALSE),
@@ -19,7 +21,7 @@ fluidPage(
       textOutput("error")
     ),
     mainPanel(
-      splitLayout(radioButtons("locbase","Base:", choices = c("Deep Cove","Anchor Island","Southern Winds"), selected = "Deep Cove", inline = FALSE),
+      splitLayout(radioButtons("locbase","Base:", choices = c("Deep Cove","Anchor Island","Southern Winds","Polaris II"), selected = "Deep Cove", inline = FALSE),
                   radioButtons("vessel","Vessel:", choices = c("Nemo","Mark Kearney","Steve Gooding","Southern Winds"), selected = "Nemo", inline = FALSE)),
       uiOutput("crew"),
       textAreaInput("wx_comments","Weather comments:", "General comments on the weather during this trip", height = 100, width = 500), 
