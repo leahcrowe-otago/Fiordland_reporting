@@ -22,9 +22,9 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 
-  # pharea = "Dusky"
-  # phyear = 2022
-  # phmonth = '02'
+  pharea = "Other"
+  phyear = 2022
+  phmonth = '05'
   
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
@@ -34,12 +34,13 @@ observeEvent(input$photogo,{
   
     if(phserv == 'Network'){
       pathway<-paste0('//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland bottlenose dolphin/Long Term Monitoring/')
+      pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
       } else if (phserv == 'Local'){
       pathway<-input$filepathinput
       #pathway<-"C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/"
+      pathimage<-paste0(pathway,phyear,'/',phyear,'_',phmonth)
       }
   
-  pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
   print(pathimage)
   
   ##########################
@@ -133,13 +134,16 @@ observeEvent(input$photogo,{
     filter(grepl("Encounter", Event_Type))%>%
     arrange(Datetime)%>%
     mutate(signum = rep(1:(n()/2), each = 2))%>%
-    dplyr::select(Datetime, DATE, signum, Effort, Event_Type, Encounter_Type, Permit)
+    dplyr::select(Datetime, DATE, signum, Species, Effort, Event_Type, Encounter_Type, Permit)%>%
+    arrange(desc(Datetime))
+  
+  sig_num$Species<-zoo::na.locf(sig_num$Species, na.rm = FALSE)
   
   f_data$Effort[f_data$Effort==""] <- NA
   f_data$Encounter_Type[f_data$Encounter_Type==""] <- NA
   print(nrow(f_data))
   
-  f_data<-f_data%>%dplyr::select(-Encounter_Type)%>%
+  f_data<-f_data%>%dplyr::select(-Encounter_Type,-Species)%>%
     left_join(sig_num, by = c("Datetime", "DATE","Event_Type", "Effort","Permit"))%>% 
     group_by(grp = cumsum(!is.na(signum))) %>% #group by Encounter_Type downfill from START to END
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Initial', 'Initial')) %>% 
@@ -226,7 +230,7 @@ observeEvent(input$photogo,{
   #nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
   head(allmerge)
-  nrow(allmerge)
+  photo_n<-nrow(allmerge)
   allmerge$Date<-ymd(allmerge$Date)
   allmerge<-allmerge%>%
     mutate(ID_Name = case_when(
@@ -284,6 +288,9 @@ observeEvent(input$photogo,{
   if(pharea != "Other"){
     allmerge_dt<-allmerge%>%
       mutate(Survey_Area = toupper(pharea))
+  } else {
+    allmerge_dt<-allmerge%>%
+      mutate(Survey_Area = "")
   }
   
   incProgress(2/5)
@@ -305,8 +312,8 @@ observeEvent(input$photogo,{
       distinct(Date, Sighting_Number, min, max)
     
     sigminmax$Date<-ymd(sigminmax$Date)
-    
-    if('Group' %in% allmerge_dt){
+    print("Group")
+    if('Group' %in% colnames(allmerge_dt)){
       print('group yes')
     allmerge_dt<-allmerge_dt%>%dplyr::select(-Group)
     }
@@ -321,8 +328,8 @@ observeEvent(input$photogo,{
       distinct()%>%
       arrange(Datetime)
     
-    nogroup<-allmerge_dt%>%
-      anti_join(allmerge_dt_group)%>%
+    nogroup<-allmerge_dt_group%>%
+      anti_join(allmerge_dt)%>%
       filter(is.na(Group))
     
     allmerge_dt_group<-allmerge_dt_group%>%
@@ -454,8 +461,8 @@ observeEvent(input$photogo,{
   #disco_data<-disco_data%>%
    # left_join(onoffeffort, by = c('date' = 'DATE'))%>%
    #dplyr::select(-min, -max, Event)
-  
-  disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
+
+    disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
     geom_line()+
     #geom_col(mapping = aes(x = date, y = ni, color = Permit), alpha = 0.5)+
     #geom_point(alpha = 0.8, size = 3, mapping = aes(color = Permit))+
@@ -550,30 +557,49 @@ observeEvent(input$photogo,{
   
 incProgress(4/5)
 
+  date_color<-viridis::viridis(length(unique(f_data$Date)), alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
+  names(date_color) <- levels(f_data$Date)
+  date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
+  
+  species_shape<-c(24, 23)
+  names(species_shape)<-c("Common", "Bottlenose")
+  species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
+  
 effmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
   geom_point(f_data%>%arrange(Datetime), mapping = aes(Longitude, Latitude, group = Date, color = Date), size = 0.1)+
   #geom_path(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE))+
   theme_bw()+
-  scale_color_viridis_d(name = "Date")+
+  date_color_scale+
   xlab("Longitude")+
   ylab("Latitude")+
   guides(color = guide_legend(override.aes = list(size = 2)))+
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90),
+        legend.position = "bottom")
+
+legend<-cowplot::get_legend(effmap)
+
+effmap<-effmap+theme(legend.position = "none")
 
 sigmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
   #path
   geom_point(f_data%>%filter(!is.na(Encounter_Type)), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
   #start point
-  geom_point(f_data%>%filter(Event_Type == 'Encounter START' & Encounter_Type == 'Initial'), mapping = aes(Longitude, Latitude, color = Date), shape = 23, fill = "red", size = 1.5, stroke = 1.5)+
+  geom_point(f_data%>%filter(Event_Type == 'Encounter START' & Encounter_Type == 'Initial'), mapping = aes(Longitude, Latitude, color = Date, shape = Species), fill = "red", size = 1.5, stroke = 1.5)+
   theme_bw()+
-  scale_color_viridis_d(name = "Date")+
+  date_color_scale+
+  species_shape_scale+
   xlab("Longitude")+
   ylab("")+
   theme(axis.text.y=element_blank())+
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 90))
+  theme(legend.position = c(0.3,0.9),
+        legend.title = element_text( size=5), 
+        legend.text=element_text(size=5),
+        legend.key.height = unit(0.3, "cm"),
+        legend.background=element_blank(),
+        axis.text.x = element_text(angle = 90))+
+  guides(colour = "none")
   
   print("mapping")
   
@@ -597,11 +623,13 @@ sigmap<-ggplot()+
     sigmap<-sigmap+
       coord_sf(xlim = c(min(f_data$Longitude)-0.2,max(f_data$Longitude)), ylim = c(min(f_data$Latitude),max(f_data$Latitude)), crs = 4269)
     h = 100
-    w1 = 1
+    w1 = 2
   
   }
   
-  map<-ggpubr::ggarrange(effmap, sigmap, common.legend = T, legend = "bottom", widths = c(w1,1), labels = 'auto')
+  #map<-ggpubr::ggarrange(effmap, sigmap, legend = "right", widths = c(w1,1), labels = 'auto')
+  map<-cowplot::plot_grid(effmap, sigmap, labels = "auto")
+  map<-cowplot::plot_grid(map, legend, ncol = 1, rel_heights = c(1, .1))
   
   ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = h, units = 'mm')
   incProgress(5/5)
@@ -652,7 +680,7 @@ sigmap<-ggplot()+
         mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
       
       params<-list( tripdate_s = tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
-                    nsurveydays = nsurveydays, recent = recent, older = older, 
+                    nsurveydays = nsurveydays, recent = recent, older = older, photo_n = photo_n,
                     vessel = vessel, crew = crew, pop_est = pop_est, trip_cap = trip_cap,
                     track_dist = track_dist, sig_days = sig_days, sig_count = sig_count, hours_wTt = hours_wTt, 
                     age_sex_table = age_sex_table, unseen_table = unseen_table, unseen_names = unseen_names,
