@@ -82,7 +82,7 @@ Recent population abundance estimate: \hfill `r params$pop_est$popsent`
 knitr::include_graphics("./figures/map.png")
 ```
 \vspace*{-5mm}
-Fig. 1. Maps of dolphin sightings (a) and survey effort (b) during this research effort. a) Initial dolphin sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with dolphins. 
+Fig. 1. Maps of survey effort (a) and dolphins sightings (b) during this research effort. a) Initial dolphin sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with dolphins. 
 \newpage
 \vspace*{5mm}
 \vspace*{-5mm}
