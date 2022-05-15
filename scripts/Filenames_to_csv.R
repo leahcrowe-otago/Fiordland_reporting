@@ -2,15 +2,15 @@ library(dplyr); library(exifr); library(stringr); library(lubridate)
 
 survey_area<-'Doubtful'
 #survey_area<-'Dusky'
-#survey_area<-'Nancy Sound'
+survey_area<-'Dagg Sound'
 if (survey_area == 'Doubtful' | survey_area == 'Dusky'){
   fiord_path<-paste0(survey_area," Sound Dolphin Monitoring/")
 } else {
   fiord_path<-paste0('Other Fiords/',survey_area,'/')
 }
 path<-paste0("//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/",fiord_path)
-year<-2018
-month<-'06'
+year<-2016
+month<-'12'
 
 fullpath<-paste0(path,year,"/",year,"_",month,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
@@ -22,7 +22,7 @@ metadata<-exifr::read_exif(filenames_unlist, tags = c("filename", "DateTimeOrigi
 ############
 ##this finds ands
 and<-metadata%>%
-  mutate(FileName = str_replace(tolower(FileName), "with","and"))%>%
+  mutate(FileName = str_replace(toupper(FileName), "WITH","and"))%>%
   mutate(FileName = str_replace(FileName, "&","and"))%>%
   filter(grepl(' and ',tolower(FileName)))%>%
   mutate(FileName = str_replace(FileName, " '",""),
