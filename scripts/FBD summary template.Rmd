@@ -18,6 +18,7 @@ params:
   hours_wTt: NA 
   recent: NA
   older: NA
+  photo_n: NA
   age_sex_table: NA
   unseen_table: NA
   unseen_names: NA
@@ -31,8 +32,8 @@ header-includes:
 
 ```{r hours, echo=FALSE}
 
-hours_100<-params$hours_wTt%>%filter(distance == '<100')
-hours_100400<-params$hours_wTt%>%filter(distance != '<100')
+hours_100<-hours_wTt%>%filter(distance == '<100')
+hours_100400<-hours_wTt%>%filter(distance != '<100')
 
 ```
 \vspace*{-5mm}
@@ -63,6 +64,9 @@ Group encounter days: \hfill `r nrow(params$sig_days)`
 Number of sightings: \hfill `r params$sig_count`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+Number of photographs: \hfill `r params$photo_n`
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Total time (hrs) with dolphins within 100 m (DOC permit): \hfill `r hours_100$total_wTt` (`r hours_100$DOC`)
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
@@ -78,7 +82,7 @@ Recent population abundance estimate: \hfill `r params$pop_est$popsent`
 knitr::include_graphics("./figures/map.png")
 ```
 \vspace*{-5mm}
-Fig. 1. Maps of dolphin sightings (a) and survey effort (b) during this research effort. a) Initial dolphin sighting locations are indicated by the red diamonds, and the colored lines represent periods of the survey spent with dolphins. 
+Fig. 1. Maps of dolphin sightings (a) and survey effort (b) during this research effort. a) Initial dolphin sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with dolphins. 
 \newpage
 \vspace*{5mm}
 \vspace*{-5mm}
