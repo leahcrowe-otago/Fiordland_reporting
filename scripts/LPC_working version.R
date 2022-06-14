@@ -190,7 +190,6 @@ if (exists("LPC_df_ls") == FALSE){
 }
 
 dusky_temp<-read.csv("./data/DUSKY_NHAT_N.csv", header = T, stringsAsFactors = F)
-dusky_temp<-dusky_temp%>%filter(YEAR != 2019)
 
 LPC_df_ls<-LPC_df_ls%>%
   bind_rows(dusky_temp)%>%
@@ -228,7 +227,7 @@ lastseen_plot<-ggplot(last_seen%>%filter(last_year_date < reporting_year)%>%filt
   ylab("Number of individuals")+
   theme(legend.position = "bottom")
 
-ggsave('./figures/lastseen_plot.png', dpi = 320, width = 160, units = 'mm')
+ggsave('./figures/lastseen_plot.png', dpi = 320, width = 160, height = 100, units = 'mm')
 
 ########
 
@@ -310,7 +309,7 @@ LPC_calf_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
   theme(legend.position = "bottom")+
   scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
 
-ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 160, units = 'mm')
+ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 150, height = 120, units = 'mm')
 
 LPC_plot<-LPC_calf_plot+
   ylim(c(50,130))+
