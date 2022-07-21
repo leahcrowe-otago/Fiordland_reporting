@@ -18,7 +18,7 @@ lifehist_long<-lifehist%>%
   mutate(YEAR = as.numeric(substr(YEAR, 2, 5)))
 
 myCol<-viridis(5, option = "D")
-ageclass_fill = c("D" = myCol[5],"C" = myCol[4], "W" = myCol[3], "S-A" = myCol[2],"A" = myCol[1], "U" = "grey")
+ageclass_fill = c("D" = myCol[5],"C" = myCol[4], "J" = myCol[3], "S-A" = myCol[2],"A" = myCol[1], "U" = "grey")
 
 ###############
 scenario<-c("Calendar","Calfyear")
@@ -217,7 +217,7 @@ last_seen<-last_seen_ind%>%
   group_by(POD, last_year_date, AGECLASS)%>%
   tally()
 
-last_seen$AGECLASS<-factor(last_seen$AGECLASS, levels = c("U","A","S-A","W","C","D"))
+last_seen$AGECLASS<-factor(last_seen$AGECLASS, levels = c("U","A","S-A","J","C","D"))
 
 lastseen_plot<-ggplot(last_seen%>%filter(last_year_date < reporting_year)%>%filter(POD != "DUSKY"))+
   geom_col(mapping = aes(x = as.numeric(last_year_date), y = n, fill = AGECLASS), color = "black", alpha = 0.7)+
@@ -244,7 +244,7 @@ year_perdolphin<-lifehist_long%>%
    AGECLASS == "NA" & as.numeric(FIRST_YEAR) == reporting_year ~ "C",
     TRUE ~ AGECLASS))
 
-year_perdolphin$AGECLASS<-factor(year_perdolphin$AGECLASS, levels = c("U","A","S-A","W","C","D"))
+year_perdolphin$AGECLASS<-factor(year_perdolphin$AGECLASS, levels = c("U","A","S-A","J","C","D"))
 
 year_perdolphin%>%filter(AGECLASS == "NA")%>%arrange(NAME)
 
@@ -292,30 +292,48 @@ calves<-lifehist%>%
   replace(is.na(.), 0)
 
 LPC_calf_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
-  geom_line(aes(x = YEAR, y = Nhat, color = POD))+
-  geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl, color = POD), width = 0.4)+
-  geom_line(aes(x = YEAR, y = n, color = POD), linetype = "dashed")+
-  geom_point(aes(x = YEAR, y = n, color = POD), shape = 24)+
+  #geom_line(aes(x = YEAR, y = Nhat, color = POD))+
+  #geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl, color = POD), width = 0.4)+
+  #geom_line(aes(x = YEAR, y = n, color = POD), linetype = "dashed")+
+  #geom_point(aes(x = YEAR, y = n, color = POD), shape = 24)+
   scale_color_brewer(palette = 'Dark2') +
-  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD), shape = 22)+
-  geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD), linetype = "dotted")+
-  new_scale_color() +
-  geom_point(aes(x = YEAR, y = Nhat, color = season))+
-  scale_color_manual(values = c("black","purple")) +
-  ylab("Number of individuals")+
+  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+  geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+  #new_scale_color() +
+  #geom_point(aes(x = YEAR, y = Nhat, color = season))+
+  #scale_color_manual(values = c("black","purple")) +
+  ylab("Number of calves born")+
   xlab("Year")+
   #facet_wrap(~POD, scales = "free")+
   theme_bw()+
   theme(legend.position = "bottom")+
   scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
 
-ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 150, height = 120, units = 'mm')
+ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 150, height = 80, units = 'mm')
 
-LPC_plot<-LPC_calf_plot+
-  ylim(c(50,130))+
-  theme(legend.direction = "vertical")
+shapes <- c("n, census" = 24, "N, estimate" = 16)
+linetype<-c("n, census" = "dashed", "N, estimate" = "solid")
 
-ggsave('./figures/LPC_plot.png', dpi = 320, width = 120, height = 100, units = 'mm')
+LPC_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
+  geom_line(aes(x = YEAR, y = n, linetype = "n, census"))+
+  geom_line(aes(x = YEAR, y = Nhat, linetype = "N, estimate"))+
+  geom_point(aes(x = YEAR, y = n, shape = "n, census"))+
+  geom_point(aes(x = YEAR, y = Nhat, shape = "N, estimate"))+
+  geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl), width = 0.4)+
+  labs(shape = "", linetype = "")+
+  #theme(legend.direction = "vertical")+
+  facet_wrap(~POD, scales = "free", ncol = 1)+
+  ylab("Number of individuals")+
+  xlab("Year")+
+  theme_bw()+
+  theme(legend.position = "bottom",
+        legend.title = element_text(""))+
+  scale_shape_manual(values = shapes)+
+  scale_linetype_manual(values = linetype)+
+  scale_color_brewer(palette = "Dark2")+
+  scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
+  
+ggsave('./figures/LPC_plot.png', dpi = 320, width = 120, height = 200, units = 'mm')
 
 library(scales)
 lastseen_plot_calf<-lastseen_plot+
@@ -323,6 +341,18 @@ lastseen_plot_calf<-lastseen_plot+
   scale_y_continuous(breaks= pretty_breaks())
 
 ggsave('./figures/lastseen_plot_calf.png', dpi = 320, width = 125, height = 100, units = 'mm')
+
+###########
+ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
+  scale_color_brewer(palette = 'Dark2') +
+  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+  geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+  ylab("Number of individuals")+
+  xlab("Year")+
+  theme_bw()+
+  theme(legend.position = "bottom")+
+  scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
+
 
 ###
 #use below in future years
