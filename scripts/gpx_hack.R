@@ -24,12 +24,12 @@ head(tracks_14Jul2022)
 charles_Nemo<-tracks_14Jul2022%>%
   mutate(gmt_datetime = ymd_hms(Time, tz = "GMT")) %>%
   mutate(nz_datetime = with_tz(gmt_datetime, tz = "Pacific/Auckland"))%>%
-  filter(nz_datetime >= "2022-07-14 10:12:30" & nz_datetime <= "2022-07-14 11:44:14")
+  filter(nz_datetime >= "2022-07-14 10:12:30" & nz_datetime <= "2022-07-14 11:44:14")%>%
+  mutate(DATE = as.Date(nz_datetime, tz = "Pacific/Auckland"), TIME = format(nz_datetime, tz = "Pacific/Auckland", format = "%H:%M:%S %p"))%>%
+  dplyr::select(nz_datetime, DATE, TIME, Latitude, Longitude)%>%
+  dplyr::rename(Datetime = nz_datetime, LATITUDE = Latitude, LONGITUDE = Longitude)
 
 charles_Nemo
-
-## write csv ----
-write.csv(charles_Nemo, paste0(pathimage,"/charles_Nemo_14Jul2022.csv"), row.names = F, na = "")
 
 ## plot ----
 leaflet(data = charles_Nemo) %>% 
@@ -39,8 +39,11 @@ leaflet(data = charles_Nemo) %>%
     layers = c("1-degree grid", "5-degree grid"),
     options = WMSTileOptions(format = "image/png8", transparent = TRUE),
     attribution = NULL)%>%
-  addCircleMarkers(lng= ~ Longitude,
-                   lat= ~ Latitude,
+  addCircleMarkers(lng= ~ LONGITUDE,
+                   lat= ~ LATITUDE,
                    stroke = F,
                    radius = 2,
                    fillOpacity = 1)
+
+## write csv ----
+write.csv(charles_Nemo, paste0(pathimage,"/Tracks/charles_Nemo_14Jul2022.csv"), row.names = F, na = "")
