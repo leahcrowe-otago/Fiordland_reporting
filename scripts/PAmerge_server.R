@@ -22,9 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 
-  pharea = "Other"
-  phyear = 2022
-  phmonth = '05'
+  # pharea = "Dusky"
+  # phyear = 2022
+  # phmonth = '07'
+  # phserv = "Network"
   
   if(pharea == "Other"){
     phareafile = 'Other Fiords/'
@@ -63,7 +64,7 @@ observeEvent(input$photogo,{
   }
   
   tracks<-as.data.frame(raw_tracks)%>%
-    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE)%>%
+    dplyr::select(DATE, TIME, LAT, LON)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
     #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
@@ -72,7 +73,8 @@ observeEvent(input$photogo,{
     group_by(Datetime)%>%
     mutate(rank = rank(Datetime, ties.method = "first"))%>%
     filter(rank == 1)%>%
-    dplyr::select(-rank)
+    dplyr::select(-rank)%>%
+    dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
   
   #find nearest position for time changes
 
