@@ -1,16 +1,16 @@
 library(dplyr); library(exifr); library(stringr); library(lubridate)
 
-survey_area<-'Doubtful'
-#survey_area<-'Dusky'
-survey_area<-'Dagg Sound'
+#survey_area<-'Doubtful'
+survey_area<-'Dusky'
+#survey_area<-'Dagg Sound'
 if (survey_area == 'Doubtful' | survey_area == 'Dusky'){
   fiord_path<-paste0(survey_area," Sound Dolphin Monitoring/")
 } else {
   fiord_path<-paste0('Other Fiords/',survey_area,'/')
 }
 path<-paste0("//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/",fiord_path)
-year<-2016
-month<-'12'
+year<-2013
+month<-'04'
 
 fullpath<-paste0(path,year,"/",year,"_",month,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)

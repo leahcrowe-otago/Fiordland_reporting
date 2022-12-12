@@ -13,7 +13,7 @@ library(lubridate)
 
 area<-"Doubtful"
 #area<-"Dusky"
-
+space<-"__"
 source('./scripts/connect to MySQL.R', local = TRUE, verbose = F)$value
 source('./scripts/life_history_ageclass update.R', local = TRUE, verbose = F)$value
 lifehist<-dbReadTable(con, "life_history_ageclass")
@@ -79,12 +79,18 @@ multiplot <- function(dolphin_name){
     \n calves: {calves_sent}")
   )
   
-  } else {
+  } else if (dolphin_name == "ADAM" | dolphin_name == "AFRICA" | dolphin_name == "ASTRO" | dolphin_name == "BOBA" | dolphin_name == "GRANITE") {
     
   cat(
     glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: {lh_dolphin$LAST_YEAR}")
   )
     
+  } else {
+  
+    cat(
+    glue::glue("\n ID code: {lh_dolphin$CODE} | \t \t sex: {lh_dolphin$SEX} | age: {lh_dolphin$LASTYEAR_AGE} |  mom: {lh_dolphin$MOM} | birth yr: {lh_dolphin$BIRTH_YEAR} | first yr: {lh_dolphin$FIRST_YEAR} | last yr: {lh_dolphin$LAST_YEAR}
+    \n {space}")
+  )
   }
   
   cat("  \n  \n")
@@ -108,102 +114,129 @@ multiplot <- function(dolphin_name){
   
   cat("  \n  \n")
   
-
-if (area == "Dusky"){
-
-  if (dolphin_name == "BAN"){
-    cat("\n\\newpage\n")
-  }
-  
-  if (dolphin_name == "DIVIDE"){
-    cat("\n\\newpage\n")
-  }
-
-  if (dolphin_name == "GAMBLE"){
-    cat("\n\\newpage\n")
-  }
-  
-    if (dolphin_name == "HOLY"){
-  cat("\n\\newpage\n")
-    } 
-  
-  if (dolphin_name == "OAK"){
-    cat("\n\\newpage\n")
-  }
-  
-  if (dolphin_name == "PEANUT"){
-    cat("\n\\newpage\n")
-  }
-  
-  if (dolphin_name == "RHODES"){
-    cat("\n\\newpage\n")
-  }  
-
-    if (dolphin_name == "BLANK"){
-    cat("\n\\newpage\n")
-  }
-  
-    if (dolphin_name == "COMMON"){
-    cat("\n\\newpage\n")
-  }
-      
-  if (dolphin_name == "NESS"){
-    cat("\n\\newpage\n")
-      }
-  
-  if (dolphin_name == "OYSTER"){
-    cat("\n\\newpage\n")
-  }
-    if (dolphin_name == "SCOOP"){
-    cat("\n\\newpage\n")
-  }
-  
-}
-  
-  
-if (area == "Doubtful"){  
-  
-  if (dolphin_name == "BOBA"){
-    cat("\n\\newpage\n")
-  }
-
-  if (dolphin_name == "CORKSCREW"){
-    cat("\n\\newpage\n")
-  }
-
-  if (dolphin_name == "FRISBEE"){
-    cat("\n\\newpage\n")
-  }
-
   if (dolphin_name == "MENTRY"){
     cat("\n\\newpage\n")
-  }
-
-  if (dolphin_name == "POOH"){
-    cat("\n\\newpage\n")
-  }
+  }  
   
-  if (dolphin_name == "VORTEX"){
-    cat("\n\\newpage\n")
-    }
+# if (area == "Dusky"){
+# 
+  # if (dolphin_name == "BAN"){
+  #   cat("\n\\newpage\n")
+  # }
+#   
+#   if (dolphin_name == "DIVIDE"){
+#     cat("\n\\newpage\n")
+#   }
+# 
+#   if (dolphin_name == "DUSK"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#     if (dolphin_name == "GAMBLE"){
+#   cat("\n\\newpage\n")
+#     } 
+#   
+#   if (dolphin_name == "HOLY"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#   if (dolphin_name == "INKA"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#   if (dolphin_name == "NOIR"){
+#     cat("\n\\newpage\n")
+#   }  
+# 
+#     if (dolphin_name == "PAW"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#     if (dolphin_name == "PONCHO"){
+#     cat("\n\\newpage\n")
+#   }
+#       
+#   if (dolphin_name == "QUIVER"){
+#     cat("\n\\newpage\n")
+#       }
+#   
+#   if (dolphin_name == "ROOSTER"){
+#     cat("\n\\newpage\n")
+#   }
+#     if (dolphin_name == "STING"){
+#     cat("\n\\newpage\n")
+#     }
+#     if (dolphin_name == "TAMALE"){
+#     cat("\n\\newpage\n")
+#     }
+#       if (dolphin_name == "VOID"){
+#     cat("\n\\newpage\n")
+#   }
+#       if (dolphin_name == "BEE"){
+#     cat("\n\\newpage\n")
+#       }
+#       if (dolphin_name == "BOWTIE"){
+#     cat("\n\\newpage\n")
+#       }
+#       if (dolphin_name == "BUENOS"){
+#     cat("\n\\newpage\n")
+#       }
+#       if (dolphin_name == "CLAW"){
+#     cat("\n\\newpage\n")
+#       }
+#       if (dolphin_name == "CV122"){
+#     cat("\n\\newpage\n")
+#       }
+#       if (dolphin_name == "DUB"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+# }
+#   
+# if (area == "Doubtful"){  
+#   
+#   if (dolphin_name == "BOBA"){
+#     cat("\n\\newpage\n")
+#   }
+# 
+#   if (dolphin_name == "CORKSCREW"){
+#     cat("\n\\newpage\n")
+#   }
+# 
+#   if (dolphin_name == "FRISBEE"){
+#     cat("\n\\newpage\n")
+#   }
+# 
+#   if (dolphin_name == "MENTRY"){
+#     cat("\n\\newpage\n")
+#   }
+# 
+#   if (dolphin_name == "POOH"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#   if (dolphin_name == "VORTEX"){
+#     cat("\n\\newpage\n")
+#     }
+#   
+#   if (dolphin_name == "MUS"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#   if (dolphin_name == "PIGLET"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#   if (dolphin_name == "SEAL"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+#     if (dolphin_name == "UPBANG"){
+#     cat("\n\\newpage\n")
+#   }
+#   
+# }
   
-  if (dolphin_name == "MUS"){
-    cat("\n\\newpage\n")
-  }
-  
-  if (dolphin_name == "PIGLET"){
-    cat("\n\\newpage\n")
-  }
-  
-  if (dolphin_name == "SEAL"){
-    cat("\n\\newpage\n")
-  }
-  
-    if (dolphin_name == "UPBANG"){
-    cat("\n\\newpage\n")
-  }
-  
-}
 }
 
 ```
