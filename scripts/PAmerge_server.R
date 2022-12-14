@@ -76,6 +76,18 @@ observeEvent(input$photogo,{
     dplyr::select(-rank)%>%
     dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
   
+  tracks$Datetime<-ymd_hms(tracks$Datetime)
+  
+  # # add gpx files made in "gpx_hack.R"
+  # missing<-read.csv(paste0(pathimage,"/Tracks/charles_Nemo_14Jul2022.csv"), header = T, stringsAsFactors = F)
+  # missing$Datetime<-ymd_hms(missing$Datetime)
+  # missing$DATE<-ymd(missing$DATE)
+  # str(missing)
+  # str(tracks)
+  # # add missing ----
+  # tracks<-tracks%>%
+  #   bind_rows(missing)
+  
   #find nearest position for time changes
 
   data.table::setDT(sigs)[,  Latitude := data.table::setDT(tracks)[sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
@@ -96,6 +108,7 @@ observeEvent(input$photogo,{
     ungroup()%>%
     dplyr::select(-tracksbin, -rank)
   
+  print(nrow(tracks))
   print(nrow(tracksrank))
   
   f_data<-tracksrank%>%
@@ -152,7 +165,7 @@ observeEvent(input$photogo,{
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Repeat', 'Repeat')) %>% 
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Follow', 'Follow')) %>% 
     ungroup() %>%
-    dplyr::select(Datetime, DATE, TIME, LATITUDE, LONGITUDE, Effort, Event_Type, Encounter_Type, Deployment, Crew, signum,
+    dplyr::select(Datetime, DATE, TIME, LATITUDE, LONGITUDE, Effort, Platform, Event_Type, Encounter_Type, Deployment, Crew, signum,
                   Species, Group_Size, Calves, Behaviours, Permit,
                   Beaufort, Swell, Glare, Visibility, Overall, SST, Depth, Note, Event, Tawaki, -grp)%>%
     dplyr::rename(Date = DATE, Time = TIME, Latitude = LATITUDE, Longitude = LONGITUDE, Sighting_Number = signum)
@@ -211,6 +224,7 @@ observeEvent(input$photogo,{
     mutate(total_wTt = `DOC permit` + `Otago permit`)%>%
     dplyr::rename("DOC" = `DOC permit`, "Otago" = `Otago permit`)
   
+  print(hours_wTt)
   ####################
   ## Photo analysis ##
   ####################
@@ -250,8 +264,11 @@ observeEvent(input$photogo,{
              filename = basename(filenames_unlist),
              date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
   head(allphotod_df)
+  
   #allphotod_df%>%filter(grepl('DSC',filename))
   
+  #those without filenames
+  head(allmerge)
   PA_fn_error<-allphotod_df%>%
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
     filter(is.na(fullfilename))
@@ -288,10 +305,10 @@ observeEvent(input$photogo,{
                                grepl("JOLLY", ID_Name) ~ "JOLLY-GOOD",
                                TRUE ~ ID_Name))
   if(pharea != "Other"){
-    allmerge_dt<-allmerge%>%
+    allmerge_dt<-allmerge_dt%>%
       mutate(Survey_Area = toupper(pharea))
   } else {
-    allmerge_dt<-allmerge%>%
+    allmerge_dt<-allmerge_dt%>%
       mutate(Survey_Area = "")
   }
   
@@ -304,6 +321,7 @@ observeEvent(input$photogo,{
     allmerge_dt$Datetime<-ymd_hms(allmerge_dt$Datetime)
     allmerge_dt$Date<-ymd(allmerge_dt$Date)
     print(nrow(allmerge_dt))
+    photo_n<-nrow(allmerge_dt)
     }
   
     ##add group # to match sighting number in final data
@@ -343,8 +361,8 @@ observeEvent(input$photogo,{
     
     write.csv(allmerge_dt_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
     
-  recent<-format(min(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
-  older<-format(min(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
+  recent<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
+  older<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
 
   ##################
   ## life history ##
@@ -390,14 +408,14 @@ observeEvent(input$photogo,{
   
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
-  trip_cap%>%filter(AgeClass == 'W')%>%as.data.frame()
+  trip_cap%>%filter(is.na(AgeClass))%>%as.data.frame()
   print('369')
   age_sex_table<-trip_cap%>%
     dplyr::select(-NAME)%>%
     group_by(SEX, AgeClass)%>%
     tally()%>%
     tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
-    arrange(factor(AgeClass, levels = c("A","S-A","W","C","U")))%>%
+    arrange(factor(AgeClass, levels = c("A","S-A","J","C","U")))%>%
     replace(is.na(.), 0)
   
   age_class_abbr<-function(x) {
@@ -405,7 +423,7 @@ observeEvent(input$photogo,{
     mutate(AgeClass = case_when(
           AgeClass == 'A' ~ "Adult",
           AgeClass == 'S-A' ~ "Sub-Adult",
-          AgeClass == 'W' ~ "Weanling",
+          AgeClass == 'J' ~ "Juvenile",
           AgeClass == 'C' ~ "Calf*",
           AgeClass == 'U' ~ "Unknown"
         ))}
@@ -532,7 +550,7 @@ observeEvent(input$photogo,{
     group_by(LAST_YEAR, SEX, AgeClass)%>%
     tally()%>%
     tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
-    arrange(factor(AgeClass, levels = c("A","J","C")))%>%
+    arrange(factor(AgeClass, levels = c("A","S-A","J","C","U")))%>%
     replace(is.na(.), 0)
   
   unseen_table<-age_class_abbr(unseen_table)
@@ -560,11 +578,11 @@ observeEvent(input$photogo,{
 incProgress(4/5)
 
   date_color<-viridis::viridis(length(unique(f_data$Date)), alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
-  names(date_color) <- levels(f_data$Date)
+  names(date_color) <- unique(f_data$Date)
   date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
   
-  species_shape<-c(24, 23)
-  names(species_shape)<-c("Common", "Bottlenose")
+  species_shape<-c(23)
+  names(species_shape)<-c("Bottlenose")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
   
 effmap<-ggplot()+
@@ -577,7 +595,8 @@ effmap<-ggplot()+
   ylab("Latitude")+
   guides(color = guide_legend(override.aes = list(size = 2)))+
   theme(axis.text.x = element_text(angle = 90),
-        legend.position = "bottom")
+        legend.position = "bottom",
+        plot.background = element_blank())
 
 legend<-cowplot::get_legend(effmap)
 
@@ -595,21 +614,31 @@ sigmap<-ggplot()+
   xlab("Longitude")+
   ylab("")+
   theme(axis.text.y=element_blank())+
-  theme(legend.position = c(0.3,0.9),
+  theme(legend.position = "none",
         legend.title = element_text( size=5), 
         legend.text=element_text(size=5),
         legend.key.height = unit(0.3, "cm"),
         legend.background=element_blank(),
-        axis.text.x = element_text(angle = 90))+
+        axis.text.x = element_text(angle = 90),
+        plot.background = element_blank())+
   guides(colour = "none")
   
   print("mapping")
   
   if (pharea == "Dusky"){
+    
+    coords_dusky<-coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
+    
     effmap<-effmap+
-      coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
+      coords_dusky+
+      scale_y_continuous(breaks = seq(-45.8,-45.5, by = 0.1)) + 
+      scale_x_continuous(breaks = seq(166.5, 167.0, by = 0.1))
+      
     sigmap<-sigmap+
-      coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
+      coords_dusky+
+      scale_y_continuous(breaks = seq(-45.8,-45.5, by = 0.1)) + 
+      scale_x_continuous(breaks = seq(166.5, 167.0, by = 0.1))
+    
     h = 100
     w1 = 1.15
   } else if (pharea == "Doubtful"){
@@ -630,7 +659,7 @@ sigmap<-ggplot()+
   }
   
   #map<-ggpubr::ggarrange(effmap, sigmap, legend = "right", widths = c(w1,1), labels = 'auto')
-  map<-cowplot::plot_grid(effmap, sigmap, labels = "auto")
+  map<-cowplot::plot_grid(effmap, sigmap, labels = "auto", rel_widths = c(1.13,1))
   map<-cowplot::plot_grid(map, legend, ncol = 1, rel_heights = c(1, .1))
   
   ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = h, units = 'mm')
@@ -640,7 +669,7 @@ sigmap<-ggplot()+
 
  output$report<-downloadHandler(
    
-   filename = paste0("FBD_monitoring_report_",phyear,"_",phmonth,"_",pharea,".pdf"),
+   filename = paste0(pharea,"_FBD_monitoring_report_",phyear,"_",phmonth,".pdf"),
    
    content = function(file) {
      
