@@ -36,7 +36,7 @@ for (i in unique(f_data$Date)){
                           stroke = F,
                           radius = 2,
                           fillOpacity = 1,
-                          popup = ~date_tracks$Datetime)
+                          popup = ~paste0(date_tracks$Datetime, "<br> ",date_tracks$Latitude, " ",date_tracks$Longitude))
 }
 
 base
@@ -54,7 +54,7 @@ for (i in unique(f_data$Date)){
                         weight = 5,
                         stroke = T,
                         fillOpacity = 0.8,
-                        popup = ~date_tracks$Datetime
+                        popup = ~paste0(date_tracks$Datetime, "<br> ",date_tracks$Latitude, " ",date_tracks$Longitude)
                         )
     }
 
