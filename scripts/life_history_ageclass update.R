@@ -18,7 +18,7 @@ assign_ageclass<-function(x){
     TRUE ~ 'U'))%>%
   mutate(this_year_ageclass = case_when(
     as.numeric(phyear) < as.numeric(FIRST_YEAR) | as.numeric(phyear) < as.numeric(BIRTH_YEAR) ~ 'NA',
-    as.numeric(phyear) >= as.numeric(DEATH_YEAR) ~ 'D',
+    as.numeric(phyear) > as.numeric(DEATH_YEAR) ~ 'D',
     TRUE ~ this_year_ageclass
   ))
 }
