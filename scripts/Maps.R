@@ -81,19 +81,19 @@ fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound",
                                    "Taiporoporo-Charles Sound","Hinenui-Nancy Sound","Te Awa-o-T\u16b-Thompson Sound",
                                    "Patea-Doubtful Sound","Te R\u101-Dagg Sound",
                                    "Te Puaitaha-Breaksea\nSound","Tamatea-Dusky\nSound","Taiari-Chalky Inlet",
-                                   "Rakituma-Preservation Inlet", "Vancouver\nArm"),
+                                   "Rakituma-Preservation Inlet"),# "Vancouver\nArm"),
                          lat = c(-45.51, -44.58, -44.72,
                                  -44.77, -44.85, -45.02,
                                  -45.05, -45.1, -45.15,
                                  -45.25, -45.38,
                                  -45.59, -45.75, -46.02,
-                                 -46.1, -45.5),
+                                 -46.1),# -45.5),
                          lon = c(167.55, 167.8, 167.55,
                                  167.5, 167.36, 167.15,
                                  167.08, 167.02, 166.97,
                                  166.9, 166.8,
                                  166.67, 166.47, 166.51,
-                                 166.6, 166.98))
+                                 166.6))#, 166.98))
 
 fiord_fill = c("Marine Reserve" = "orange")
 
@@ -120,13 +120,13 @@ fiords<-base+
                               -0.5,-0.5,-1.5,
                               -0.3,-0.2,
                               -0.4,-0.3,-0.3,
-                              -0.30,0.23),
+                              -0.30),#0.23),
                   nudge_y = c(-0.05,0.01,0.04,
                               0.1,0.05,0.1,
                               0.08,0.05,0.01,
                               0,0,
                               0.08,-0.02,-0.04,
-                              -0.15,-0.09))
+                              -0.15))#,-0.09))
   
 ggsave("./figures/fiords.svg", fiords, dpi = 320, width = 250, units = 'mm')
 
@@ -176,3 +176,37 @@ deploy<-ggpubr::ggarrange(chalk_pres,midfiord, common.legend = T, legend = "bott
 
 ggsave("./figures/deploy_DOC.svg", deploy, dpi = 320, width = 250, units = 'mm')
 ggsave("./figures/deploy_DOC.png", deploy, dpi = 320, height = 150, units = 'mm')
+
+#############
+
+doubt_dusk_labels<-data.frame(label = c("Te Awa-o-T\u16b-Thompson Sound",
+                                   "Patea-Doubtful Sound",
+                                   "Te Puaitaha-Breaksea\nSound","Tamatea-Dusky\nSound"),
+                         lat = c(-45.15,
+                                 -45.25,
+                                 -45.59, -45.75),
+                         lon = c(166.97,
+                                 166.9,
+                                 166.67, 166.47))
+
+doubt_dusk<-base+
+  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.4)+
+  geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.4)+
+  scale_fill_manual(values = fiord_fill)+
+  theme(#legend.position = c(0.23, 0.94),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.margin = margin(c(1, 1, 1, 1)),
+        legend.key.size = unit(0.2, 'cm'),
+        legend.text = element_text(size = 8),
+        legend.spacing.y = unit(-0.02, "cm"),
+        legend.box.background = element_rect(color = "white",fill = "white"),
+        legend.key = element_rect(fill = NA),
+        axis.text = element_text(size = 6),
+        axis.title = element_text(size = 6))+
+  scale_color_manual(values = type_color)+
+  coord_sf(xlim = c(166.4,167.2), ylim = c(-45.13,-45.81), crs = 4269)
+
+ggsave("./figures/doubt_dusk.svg", doubt_dusk, dpi = 320, width = 250, units = 'mm')
+
