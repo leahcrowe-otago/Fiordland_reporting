@@ -2,7 +2,7 @@ library(leaflet);library(leaflet.esri);library(leaflet.extras)
 library(lubridate); library(dplyr)
 
 pharea = "Dusky"
-phyear = 2021
+phyear = 2022
 phmonth = '07'
 phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
 pathway<-paste0('//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland bottlenose dolphin/Long Term Monitoring/')
@@ -20,36 +20,37 @@ base<-leaflet(data = f_data) %>%
     options = WMSTileOptions(format = "image/png8", transparent = TRUE),
     attribution = NULL)%>%
   addLayersControl(
-    overlayGroups = ~DATE,
+    overlayGroups = ~Date,
    options = layersControlOptions(collapsed = FALSE))
 
-for (i in unique(f_data$DATE)){
+for (i in unique(f_data$Date)){
 
-  date_tracks<-f_data%>%filter(DATE == i)
+  date_tracks<-f_data%>%filter(Date == i)
   print(date_tracks)
   
   base = addCircleMarkers(base,
-                          lng= ~ date_tracks$LON,
-                          lat= ~ date_tracks$LAT,
-                          group= date_tracks$DATE,
-                          color= datepal(date_tracks$DATE),
+                          lng= ~ date_tracks$Longitude,
+                          lat= ~ date_tracks$Latitude,
+                          group= date_tracks$Date,
+                          color= datepal(date_tracks$Date),
                           stroke = F,
                           radius = 2,
-                          fillOpacity = 1)
+                          fillOpacity = 1,
+                          popup = ~date_tracks$Datetime)
 }
 
 base
 
-for (i in unique(f_data$DATE)){
+for (i in unique(f_data$Date)){
   
-    date_tracks<-f_data%>%filter(DATE == i)%>%filter(Home.screen == "Encounter START")
+    date_tracks<-f_data%>%filter(Date == i)%>%filter(Event_Type == "Encounter START")
     print(date_tracks)
     
     base = addCircleMarkers(base,
-                        lng= ~ date_tracks$LON,
-                        lat= ~ date_tracks$LAT,
-                        group= date_tracks$DATE,
-                        color= datepal(date_tracks$DATE),
+                        lng= ~ date_tracks$Longitude,
+                        lat= ~ date_tracks$Latitude,
+                        group= date_tracks$Date,
+                        color= datepal(date_tracks$Date),
                         weight = 5,
                         stroke = T,
                         fillOpacity = 0.8,
