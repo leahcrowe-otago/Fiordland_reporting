@@ -46,4 +46,4 @@ leaflet(data = charles_Nemo) %>%
                    fillOpacity = 1)
 
 ## write csv ----
-write.csv(charles_Nemo, paste0(pathimage,"/Tracks/charles_Nemo_14Jul2022.csv"), row.names = F, na = "")
+write.csv(charles_Nemo, paste0(pathimage,"/Tracks/"phyear,"_"phmotnh, "_missing.csv"), row.names = F, na = "")
