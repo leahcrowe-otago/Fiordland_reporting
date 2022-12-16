@@ -1,10 +1,11 @@
 library(leaflet);library(leaflet.esri);library(leaflet.extras)
 library(lubridate); library(dplyr)
 
-pharea = "Dusky"
+#pharea = "Dusky"
 phyear = 2022
 phmonth = '07'
-phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
+#phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
+phareafile = paste0('Other fiords/Survey data/')
 pathway<-paste0('//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland bottlenose dolphin/Long Term Monitoring/')
 pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
 
