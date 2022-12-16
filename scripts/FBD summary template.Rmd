@@ -32,8 +32,8 @@ header-includes:
 
 ```{r hours, echo=FALSE}
 
-hours_100<-hours_wTt%>%filter(distance == '<100')
-hours_100400<-hours_wTt%>%filter(distance != '<100')
+hours_100<-params$hours_wTt%>%filter(distance == '<100')
+hours_100400<-params$hours_wTt%>%filter(distance != '<100')
 
 hrs100_400_total<-hours_100400$total_wTt
 hrs100_400_doc<-hours_100400$DOC
@@ -118,7 +118,7 @@ knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", b
 \vspace*{-5mm}
 ```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals from the ", pharea, " pod that have not been sighted in the last year (since ",recent, "), but were sighted in the year before (between ", older, " and ", recent,"). See Table 1 for age class definitions."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals from the ", pharea, " pod that have not been sighted in the last year (since ",params$recent, "), but were sighted in the year before (between ", params$older, " and ", params$recent,"). See Table 1 for age class definitions."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
 ```
