@@ -135,8 +135,7 @@ observeEvent(input$photogo,{
       arrange(Datetime)
       
     f_data<-f_data%>%
-      bind_rows(f_data_missing)%>%
-      arrange(Datetime)
+      bind_rows(f_data_missing)
     
   }
   
