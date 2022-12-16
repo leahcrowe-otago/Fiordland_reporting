@@ -4,6 +4,7 @@ fluidPage(
   sidebarLayout(
     sidebarPanel(
       radioButtons("filepathway", "File Pathway", choices = c("Network", "Local"), selected = "Network", inline = FALSE), 
+      radioButtons("missing", "Missing data to hack in?", choices = c("Y", "N"), selected = "N", inline = FALSE), 
       textInput("filepathinput", (HTML(paste("Local pathway for photo analysis spreadsheet", '<br/>', "Example: C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/")))),
       textInput("photoyear","Year (YYYY)"),
       textInput("photomonth","Month (MM)"),
