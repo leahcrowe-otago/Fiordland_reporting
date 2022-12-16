@@ -21,14 +21,14 @@ observeEvent(input$photogo,{
   #print(phserv)
   #print(phyear)
   #print(phfile)
-
-  # pharea = "Dusky"
-  # phyear = 2022
-  # phmonth = '07'
-  # phserv = "Network"
+# 
+# pharea = "Other"
+# phyear = 2022
+# phmonth = '07'
+# phserv = "Network"
   
   if(pharea == "Other"){
-    phareafile = 'Other Fiords/'
+    phareafile = 'Other Fiords/Survey data/'
   } else {
     phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
   }
@@ -39,6 +39,7 @@ observeEvent(input$photogo,{
       } else if (phserv == 'Local'){
       pathway<-input$filepathinput
       #pathway<-"C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/"
+      #pathimage<-paste0(pathway,'Other Fiords/',phyear,'/',phyear,'_',phmonth)
       pathimage<-paste0(pathway,phyear,'/',phyear,'_',phmonth)
       }
   
@@ -78,18 +79,8 @@ observeEvent(input$photogo,{
   
   tracks$Datetime<-ymd_hms(tracks$Datetime)
   
-  # # add gpx files made in "gpx_hack.R"
-  # missing<-read.csv(paste0(pathimage,"/Tracks/charles_Nemo_14Jul2022.csv"), header = T, stringsAsFactors = F)
-  # missing$Datetime<-ymd_hms(missing$Datetime)
-  # missing$DATE<-ymd(missing$DATE)
-  # str(missing)
-  # str(tracks)
-  # # add missing ----
-  # tracks<-tracks%>%
-  #   bind_rows(missing)
+  #find nearest position for time changes ----
   
-  #find nearest position for time changes
-
   data.table::setDT(sigs)[,  Latitude := data.table::setDT(tracks)[sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
   data.table::setDT(sigs)[,  Longitude := data.table::setDT(tracks)[sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
   
@@ -107,7 +98,7 @@ observeEvent(input$photogo,{
     filter(rank == 1)%>%
     ungroup()%>%
     dplyr::select(-tracksbin, -rank)
-  
+
   print(nrow(tracks))
   print(nrow(tracksrank))
   
@@ -117,6 +108,39 @@ observeEvent(input$photogo,{
            across(where(is.character), ~na_if(., "")))%>%
     arrange(Datetime)
 
+  # add missing ----
+  
+  if(input$missing == "Y"){
+    print("missing")
+    # add gpx files made in "gpx_hack.R" ----
+    missing_tracks<-read.csv(paste0(pathimage,"/Tracks/",phyear,"_",phmonth,"_missing.csv"), header = T, stringsAsFactors = F)
+    missing_tracks$Datetime<-ymd_hms(missing_tracks$Datetime)
+    missing_tracks$DATE<-ymd(missing_tracks$DATE)
+    
+    missing_sigs<-read.csv(paste0(pathimage,"/Sightings/f_",phyear,"_",phmonth," CyberTracker_missing.csv"), header = T, stringsAsFactors = F)
+    missing_sigs<-missing_sigs%>%mutate(Datetime = ymd_hms(paste(Date, Time)))%>%
+      dplyr::select(Datetime, everything())
+    
+    missing_sigs$Date<-ymd(missing_sigs$Date)
+    #find nearest position for time changes ----
+    
+    data.table::setDT(missing_sigs)[,  Latitude := data.table::setDT(missing_tracks)[missing_sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
+    data.table::setDT(missing_sigs)[,  Longitude := data.table::setDT(missing_tracks)[missing_sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
+    
+    f_data_missing<-missing_tracks%>%
+      full_join(missing_sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
+      mutate(#Datetime = as.factor(Datetime),
+             DATE = as.factor(DATE),
+             across(where(is.character), ~na_if(., "")))%>%
+      arrange(Datetime)
+      
+    f_data<-f_data%>%
+      bind_rows(f_data_missing)%>%
+      arrange(Datetime)
+    
+  }
+  
+  
   #f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
   
@@ -233,8 +257,15 @@ observeEvent(input$photogo,{
     output$error<-renderText({"Double check 'Year', 'Month', and 'Area monitored' -- files cannot be found."})
   } else {
     output$error<-renderText({""})
+
+# include photo ID or not if it doesn't exist    
     
-   if (input$EXIF == "collect"){  
+if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T, all.files = F), character(0)) == FALSE){    
+   
+  map_species<-"no"
+  Tt_ID<-"yes"
+  
+  if (input$EXIF == "collect"){  
     print("merging PA")
   ##merge all PA excel spreadsheets
   PA_xlsx<-list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T, all.files = F)
@@ -360,10 +391,10 @@ observeEvent(input$photogo,{
     nrow(allmerge_dt_group)
     
     write.csv(allmerge_dt_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
-    
-  recent<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
-  older<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
 
+    recent<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
+    older<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
+    
   ##################
   ## life history ##
   ##################
@@ -569,6 +600,12 @@ observeEvent(input$photogo,{
   
   print(unseen_table)
   
+} else {
+  
+  map_species<-"yes"
+  Tt_ID<-"no"
+}
+    
   #########
   ## MAP ##
   #########
@@ -580,11 +617,18 @@ incProgress(4/5)
   date_color<-viridis::viridis(length(unique(f_data$Date)), alpha = 1, begin = 0, end = 1, direction = 1, option = "D")
   names(date_color) <- unique(f_data$Date)
   date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
-  
+
+if (map_species == "no"){  
   species_shape<-c(23)
   names(species_shape)<-c("Bottlenose")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
+} else if (map_species == "yes"){
   
+  species_shape<-c(23,24,21,22,25)
+  names(species_shape)<-c("Bottlenose","Common","Dusky","Shepherd's","Hector's")
+  species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
+  
+}
 effmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
   geom_point(f_data%>%arrange(Datetime), mapping = aes(Longitude, Latitude, group = Date, color = Date), size = 0.1)+
@@ -614,7 +658,7 @@ sigmap<-ggplot()+
   xlab("Longitude")+
   ylab("")+
   theme(axis.text.y=element_blank())+
-  theme(legend.position = "none",
+  theme(legend.position = "bottom",
         legend.title = element_text( size=5), 
         legend.text=element_text(size=5),
         legend.key.height = unit(0.3, "cm"),
@@ -623,6 +667,10 @@ sigmap<-ggplot()+
         plot.background = element_blank())+
   guides(colour = "none")
   
+legend_sig<-cowplot::get_legend(sigmap)
+
+sigmap<-sigmap+theme(legend.position = "none")
+
   print("mapping")
   
   if (pharea == "Dusky"){
@@ -661,6 +709,7 @@ sigmap<-ggplot()+
   #map<-ggpubr::ggarrange(effmap, sigmap, legend = "right", widths = c(w1,1), labels = 'auto')
   map<-cowplot::plot_grid(effmap, sigmap, labels = "auto", rel_widths = c(1.13,1))
   map<-cowplot::plot_grid(map, legend, ncol = 1, rel_heights = c(1, .1))
+  map<-cowplot::plot_grid(map, legend_sig, ncol = 1, rel_heights = c(1, .1))
   
   ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = h, units = 'mm')
   incProgress(5/5)
@@ -673,9 +722,12 @@ sigmap<-ggplot()+
    
    content = function(file) {
      
-     if(pharea == "Other"){
+     if(pharea == "Other" & Tt_ID == "yes"){
       tempReport<-file.path("./scripts/FBD summary template_other.Rmd")
-      file.copy("FBD summary template_other.Rmd", tempReport, overwrite = FALSE)  
+      file.copy("FBD summary template_other.Rmd", tempReport, overwrite = FALSE) 
+     } else if (pharea == "Other" & Tt_ID == "no"){
+         tempReport<-file.path("./scripts/FBD summary template_other_no dolphin.Rmd")
+         file.copy("FBD summary template_other_no dolphin.Rmd", tempReport, overwrite = FALSE)
      } else {
       tempReport<-file.path("./scripts/FBD summary template.Rmd")
       file.copy("FBD summary template.Rmd", tempReport, overwrite = FALSE)
@@ -695,6 +747,18 @@ sigmap<-ggplot()+
         loc_base<-paste0(loc_base,"/",input$locbase)
       }
       nsurveydays<-nrow(f_data%>%distinct(Date))
+      
+      if(Tt_ID == "no"){
+        recent = NA
+        older = NA 
+        photo_n = NA
+        trip_cap = NA
+        hours_wTt = NA
+        age_sex_table = NA
+        unseen_table = NA
+        unseen_names = NA
+      }
+      
       vessel<-input$vessel
       if(grepl('Southern Winds',loc_base) == TRUE & vessel != "Southern Winds"){
         vessel<-paste0(vessel,"/Southern Winds")
@@ -704,12 +768,14 @@ sigmap<-ggplot()+
       wx_comments<-input$wx_comments
       calf_comments<-input$calf_comments
       next_comments<-input$next_comments
-      
-      pop_est<-read.csv('./data/FBD_popest.csv', header = T)%>%
-        filter(Year == max(Year))%>%
-        filter(Pod == pharea)%>%
-        mutate(popsent = paste0(Year,": ",Est, " (95% CI = ",lcl,"--",ucl,")"))
-      
+      if (Tt_ID == "yes") {
+        pop_est <- read.csv('./data/FBD_popest.csv', header = T) %>%
+          filter(Year == max(Year)) %>%
+          filter(Pod == pharea) %>%
+          mutate(popsent = paste0(Year, ": ", Est, " (95% CI = ", lcl, "--", ucl, ")"))
+      } else {
+        pop_est = NA
+      }
       params<-list( tripdate_s = tripdate_s, tripdate_e = tripdate_e, loc_base = loc_base, 
                     nsurveydays = nsurveydays, recent = recent, older = older, photo_n = photo_n,
                     vessel = vessel, crew = crew, pop_est = pop_est, trip_cap = trip_cap,
@@ -722,7 +788,9 @@ sigmap<-ggplot()+
                    envir = new.env(parent = globalenv()))
    })
   }
-  })
+  
+    
+    })
 })
   
   
