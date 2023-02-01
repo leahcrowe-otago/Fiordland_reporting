@@ -22,10 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 # 
-# pharea = "Other"
+# pharea = "Doubtful"
 # phyear = 2022
-# phmonth = '07'
-# phserv = "Network"
+# phmonth = '10'
+# phserv = "Local"
   
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -65,7 +65,7 @@ observeEvent(input$photogo,{
   }
   
   tracks<-as.data.frame(raw_tracks)%>%
-    dplyr::select(DATE, TIME, LAT, LON)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
+    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
     #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
@@ -74,8 +74,8 @@ observeEvent(input$photogo,{
     group_by(Datetime)%>%
     mutate(rank = rank(Datetime, ties.method = "first"))%>%
     filter(rank == 1)%>%
-    dplyr::select(-rank)%>%
-    dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
+    dplyr::select(-rank) # %>%
+    # dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
   
   tracks$Datetime<-ymd_hms(tracks$Datetime)
   
@@ -187,7 +187,7 @@ observeEvent(input$photogo,{
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Initial', 'Initial')) %>% 
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Repeat', 'Repeat')) %>% 
     mutate(Encounter_Type = replace(Encounter_Type, first(Encounter_Type) == 'Follow', 'Follow')) %>% 
-    ungroup() %>%
+    ungroup() %>% 
     dplyr::select(Datetime, DATE, TIME, LATITUDE, LONGITUDE, Effort, Platform, Event_Type, Encounter_Type, Deployment, Crew, signum,
                   Species, Group_Size, Calves, Behaviours, Permit,
                   Beaufort, Swell, Glare, Visibility, Overall, SST, Depth, Note, Event, Tawaki, -grp)%>%
@@ -219,6 +219,9 @@ observeEvent(input$photogo,{
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
   
   sig_num$Permit[sig_num$Permit==""] <- NA
+  
+  #order events in ascending order for Last Observation Carried Forward
+  sig_num<-sig_num%>%arrange(signum,Datetime)
   sig_num$Permit<-zoo::na.locf(sig_num$Permit, na.rm = FALSE)
   sig_num$Encounter_Type<-zoo::na.locf(sig_num$Encounter_Type, na.rm = FALSE)
   
@@ -226,7 +229,8 @@ observeEvent(input$photogo,{
     dplyr::select(signum, Datetime, Encounter_Type, Event_Type, Permit)%>%
     group_by(signum, Encounter_Type)%>%
     tidyr::pivot_wider(names_from = Event_Type, values_from = Datetime)%>%
-    mutate(time_w = as.numeric(difftime(`Encounter END & DATA`,`Encounter START`), units = "mins"))
+    mutate(time_w = as.numeric(difftime(`Encounter END & DATA`,`Encounter START`), units = "mins"))%>%
+    as.data.frame()
   
   unique(onoffsigs$Permit)
   
@@ -248,6 +252,7 @@ observeEvent(input$photogo,{
     dplyr::rename("DOC" = `DOC permit`, "Otago" = `Otago permit`)
   
   print(hours_wTt)
+  
   ####################
   ## Photo analysis ##
   ####################
