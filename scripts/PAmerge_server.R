@@ -266,6 +266,7 @@ observeEvent(input$photogo,{
     
 if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T, all.files = F), character(0)) == FALSE){    
    
+  print("identical")
   map_species<-"no"
   Tt_ID<-"yes"
   
@@ -407,17 +408,18 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   source('./scripts/connect to MySQL.R', local = TRUE)$value
   source('./scripts/life_history_ageclass update.R', local = TRUE)$value
   lifehist<-dbReadTable(con, "life_history_ageclass")
+  print(lifehist)
+  #phyear gets updated to calf year in the "life_history_ageclass.R" run
+  print(phyear)
+  lhyear = phyear
   
-  if (as.numeric(phmonth) >= 9){
-   lhyear = phyear + 1
-  } else {
-    lhyear = phyear
-  }
   #complicated life history related to when the survey occurs
   #could be better defined by month of last sig to determine what "dolphin" year we are dealing with
   lifehist<-lifehist%>%
     dplyr::select(POD, NAME, SEX, FIRST_YEAR, BIRTH_YEAR, LAST_YEAR, LAST_DATE, ends_with(as.character(lhyear)))%>%
     filter(across(last_col()) != 'NA' & across(last_col()) != 'D')
+  
+  print(lifehist)
   
   if (pharea != "Other"){
     lifehist<-lifehist%>%filter(POD == toupper(pharea))
@@ -570,6 +572,8 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   #   arrange(NAME)%>%
   #   dplyr::left_join(lifehist, by = "NAME")
   
+  print(lifehist)
+  
   unseen_two_years<-lifehist%>%
     anti_join(thistrip_names)%>%
     filter(LAST_DATE < max(as.Date(onoffeffort$DATE)) - lubridate::years(1) & LAST_DATE >= max(as.Date(onoffeffort$DATE)) - lubridate::years(2))%>%
@@ -623,8 +627,8 @@ incProgress(4/5)
   date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
 
 if (map_species == "no"){  
-  species_shape<-c(23)
-  names(species_shape)<-c("Bottlenose")
+  species_shape<-c(23,24)
+  names(species_shape)<-c("Bottlenose","Humpback")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
 } else if (map_species == "yes"){
   
@@ -712,10 +716,12 @@ sigmap<-sigmap+theme(legend.position = "none")
   
   #map<-ggpubr::ggarrange(effmap, sigmap, legend = "right", widths = c(w1,1), labels = 'auto')
   map<-cowplot::plot_grid(effmap, sigmap, labels = "auto", rel_widths = c(1.13,1))
-  map<-cowplot::plot_grid(map, legend, ncol = 1, rel_heights = c(1, .1))
-  map<-cowplot::plot_grid(map, legend_sig, ncol = 1, rel_heights = c(1, .1))
+  legend<-cowplot::plot_grid(legend, ncol = 1, rel_heights = c(.1))
+  legend_sig<-cowplot::plot_grid(legend_sig, ncol = 1, rel_heights = c(.1))
   
-  ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = h, units = 'mm')
+  ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 115, units = 'mm')
+  ggsave(filename = 'legend.png',legend,device = 'png', './figures', dpi = 320, width = 169, height = 10, units = 'mm')
+  ggsave(filename = 'legend_sig.png',legend_sig,device = 'png', './figures', dpi = 320, width = 75, height = 30, units = 'mm')
   incProgress(5/5)
  print("Done")
  enable("report")
