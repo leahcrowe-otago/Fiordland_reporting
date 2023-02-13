@@ -22,11 +22,11 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 # 
-# pharea = "Doubtful"
+# pharea = "Dusky"
 # phyear = 2022
-# phmonth = '10'
-# phserv = "Local"
-  
+# phmonth = '07'
+# phserv = "Network"
+
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
   } else {
@@ -65,17 +65,20 @@ observeEvent(input$photogo,{
   }
   
   tracks<-as.data.frame(raw_tracks)%>%
-    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
+    dplyr::select(DATE, TIME, LAT, LON, DEVICEID)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
     #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
-    arrange(Datetime)%>%
+    arrange(DEVICEID, Datetime)%>%
     distinct()%>%
-    group_by(Datetime)%>%
+    group_by(DEVICEID, Datetime)%>%
     mutate(rank = rank(Datetime, ties.method = "first"))%>%
     filter(rank == 1)%>%
-    dplyr::select(-rank) # %>%
-    # dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
+    dplyr::select(-rank) %>%
+    dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
+  
+  tracks%>%
+    distinct(DATE, DEVICEID)
   
   tracks$Datetime<-ymd_hms(tracks$Datetime)
   
@@ -203,10 +206,13 @@ observeEvent(input$photogo,{
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",pharea,".csv"), row.names = F, na = "")
   print(nrow(f_data))
-  
+
   incProgress(3/5)
   #convert meters to nm
   m_nm<-1/1852
+  
+  #2022_07 Dusky mess
+  #f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,"_lowercase.csv"), header = T, stringsAsFactors = F)
   
   f_data_dist<-f_data%>%
     arrange(Datetime)%>%
@@ -278,10 +284,11 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   PA_xlsx<-grep(PA_xlsx, pattern = "[~]", invert = T, value = T)
   
   PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000))
-  nrow(PA_merge[[1]])
+  nrow(PA_merge[[2]])
   #nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
   head(allmerge)
+  nrow(allmerge)
   photo_n<-nrow(allmerge)
   allmerge$Date<-ymd(allmerge$Date)
   allmerge<-allmerge%>%
@@ -300,28 +307,31 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
              filename = basename(filenames_unlist),
              date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
   head(allphotod_df)
+  nrow(allphotod_df)
   
   #allphotod_df%>%filter(grepl('DSC',filename))
   
   #those without filenames
-  head(allmerge)
-  PA_fn_error<-allphotod_df%>%
-    right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
-    filter(is.na(fullfilename))
 
-  if (nrow(PA_fn_error) > 0){
-    #return an error message before proceeding
-    #and print the table
-  }
+  # PA_fn_error<-allphotod_df%>%
+  #   right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
+  #   filter(is.na(fullfilename))
+  # nrow(PA_fn_error)
+  # 
+  # if (nrow(PA_fn_error) > 0){
+  #   #return an error message before proceeding
+  #   #and print the table
+  # }
   
 #allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
-
+  nrow(allmerge)
+  nrow(allphotod_df)
   files_for_exif<-allphotod_df%>%
     mutate(filename = stringr::str_sub(filename, end = -5))%>%
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
-    distinct(fullfilename)%>%
+    #distinct(fullfilename)%>%
     filter(!is.na(fullfilename))
-  
+  nrow(files_for_exif)
   incProgress(1/5)
   print("getting exif data")
   #get exif data
@@ -331,7 +341,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   metadata2<-metadata%>%
     mutate(Filename = stringr::str_sub(basename(FileName), end = -5),
            Datetime = ymd_hms(DateTimeOriginal),
-           Date = as.Date(Datetime))%>%
+           Date = ymd(as.Date(Datetime)))%>%
     dplyr::select(Filename, Datetime, Date)
   nrow(metadata2)
   
@@ -339,7 +349,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     left_join(metadata2, by = c("Filename", "Date"))%>%
     mutate(ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
                                grepl("JOLLY", ID_Name) ~ "JOLLY-GOOD",
-                               TRUE ~ ID_Name))
+                               TRUE ~ ID_Name))%>%
+    filter(ID_Name != "CULL")
+  
   if(pharea != "Other"){
     allmerge_dt<-allmerge_dt%>%
       mutate(Survey_Area = toupper(pharea))
@@ -361,41 +373,50 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     }
   
     ##add group # to match sighting number in final data
-    sigminmax<-f_data%>%filter(!is.na(Sighting_Number))%>%
+    sigminmax<-f_data%>%#filter(!is.na(Sighting_Number))%>%
       group_by(Sighting_Number)%>%
-      mutate(max = max(Datetime),
-             min = min(Datetime))%>%
-      distinct(Date, Sighting_Number, min, max)
+      mutate(max = ymd_hms(max(Datetime)),
+             min = ymd_hms(min(Datetime)))%>%
+      distinct(Date, Sighting_Number, min, max)%>%
+      filter(!is.na(Sighting_Number))
     
     sigminmax$Date<-ymd(sigminmax$Date)
+    
     print("Group")
     if('Group' %in% colnames(allmerge_dt)){
       print('group yes')
     allmerge_dt<-allmerge_dt%>%dplyr::select(-Group)
     }
     
+   #add group based on time of photo compared with sighting time
+    allmerge_dt$Date<-ymd(allmerge_dt$Date)
+    
     allmerge_dt_group<-allmerge_dt%>%
       left_join(sigminmax, by = "Date")%>%
       mutate(Group = case_when(
         Datetime >= min & Datetime <= max ~ Sighting_Number
-      ))%>%
-      filter(!is.na(Group))%>%
+      ))
+    
+    #filter out photos that fall neatly within the sighting time
+    allmerge_wgroup<-allmerge_dt_group%>%filter(!is.na(Group))%>%
       dplyr::select(-Sighting_Number, -max, -min)%>%
       distinct()%>%
       arrange(Datetime)
+    #filter out photos that DON'T fall neatly within the sighting time
+    allmerge_wogroup<-allmerge_dt_group%>%filter(is.na(Group))%>%
+      dplyr::select(-Sighting_Number, -max, -min)%>%
+      distinct()%>%
+      arrange(Datetime)%>%
+      anti_join(allmerge_wgroup, by = c("Datetime","ID_Name","Part"))
     
-    nogroup<-allmerge_dt_group%>%
-      anti_join(allmerge_dt)%>%
-      filter(is.na(Group))
-    
-    allmerge_dt_group<-allmerge_dt_group%>%
-      bind_rows(nogroup)%>%
+    allmerge_group<-allmerge_wgroup%>%
+      bind_rows(allmerge_wogroup)%>%
       arrange(Datetime)%>%
       mutate(TRIP = paste0(phyear,"_",phmonth))
     
-    nrow(allmerge_dt_group)
+    print(nrow(allmerge_group))
     
-    write.csv(allmerge_dt_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
+    write.csv(allmerge_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
 
     recent<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
     older<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
@@ -408,7 +429,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   source('./scripts/connect to MySQL.R', local = TRUE)$value
   source('./scripts/life_history_ageclass update.R', local = TRUE)$value
   lifehist<-dbReadTable(con, "life_history_ageclass")
-  print(lifehist)
+  #print(lifehist)
   #phyear gets updated to calf year in the "life_history_ageclass.R" run
   print(phyear)
   lhyear = phyear
@@ -627,8 +648,8 @@ incProgress(4/5)
   date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
 
 if (map_species == "no"){  
-  species_shape<-c(23,24)
-  names(species_shape)<-c("Bottlenose","Humpback")
+  species_shape<-c(23)#,24)
+  names(species_shape)<-c("Bottlenose")#,"Humpback")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
 } else if (map_species == "yes"){
   
