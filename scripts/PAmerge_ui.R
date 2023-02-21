@@ -9,7 +9,9 @@ fluidPage(
       textInput("photoyear","Year (YYYY)"),
       textInput("photomonth","Month (MM)"),
       radioButtons("areainput", "Area monitored", choices = c("Doubtful","Dusky","Milford","Other"), selected = "Doubtful", inline = FALSE), 
-      selectInput("otherfiord","Fiords surveyed:", c("Taiporoporo-Charles" = "Taiporoporo-Charles Sound",
+      selectInput("otherfiord","Fiords surveyed:", c("Piopiotahi-Milford" = "Piopiotahi-Milford Sound",
+                                                           "Te Houhou-George" = "Te Houhou-George Sound",
+                                                           "Taiporoporo-Charles" = "Taiporoporo-Charles Sound",
                                                            "Hinenui-Nancy" = "Hinenui-Nancy Sound",
                                                            "Patea-Doubtful" = "Patea-Doubtful complex",
                                                            "Te R\u101-Dagg" = "Te R\u101-Dagg Sound",
@@ -22,8 +24,8 @@ fluidPage(
       textOutput("error")
     ),
     mainPanel(
-      splitLayout(radioButtons("locbase","Base:", choices = c("Deep Cove","Anchor Island","Southern Winds","Polaris II"), selected = "Deep Cove", inline = FALSE),
-                  radioButtons("vessel","Vessel:", choices = c("Nemo","Mark Kearney","Steve Gooding","Southern Winds"), selected = "Nemo", inline = FALSE)),
+      splitLayout(radioButtons("locbase","Base:", choices = c("Deep Cove","Anchor Island","Southern Winds","Polaris II","Pembroke"), selected = "Deep Cove", inline = FALSE),
+                  radioButtons("vessel","Vessel:", choices = c("Nemo","Mark Kearney","Steve Gooding","Southern Winds","Pembroke"), selected = "Nemo", inline = FALSE)),
       uiOutput("crew"),
       textAreaInput("wx_comments","Weather comments (handy macron \u101):", "General comments on the weather during this trip", height = 100, width = 500), 
       textAreaInput("calf_comments","Calf comments:", "Highlight new calves observed in this trip", height = 100, width = 500),
