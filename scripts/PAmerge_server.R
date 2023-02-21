@@ -22,10 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 # 
-# pharea = "Dusky"
-# phyear = 2022
-# phmonth = '07'
-# phserv = "Network"
+pharea = "Other"
+phyear = 2022
+phmonth = '11'
+phserv = "Local"
 
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -65,7 +65,7 @@ observeEvent(input$photogo,{
   }
   
   tracks<-as.data.frame(raw_tracks)%>%
-    dplyr::select(DATE, TIME, LAT, LON, DEVICEID)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
+    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE, DEVICEID)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
     #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
@@ -74,8 +74,8 @@ observeEvent(input$photogo,{
     group_by(DEVICEID, Datetime)%>%
     mutate(rank = rank(Datetime, ties.method = "first"))%>%
     filter(rank == 1)%>%
-    dplyr::select(-rank) %>%
-    dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
+    dplyr::select(-rank) #%>%
+    #dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
   
   tracks%>%
     distinct(DATE, DEVICEID)
@@ -203,6 +203,8 @@ observeEvent(input$photogo,{
   
   nrow(f_data)
   
+  f_data$Platform<-zoo::na.locf(f_data$Platform, na.rm = FALSE)
+  
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",pharea,".csv"), row.names = F, na = "")
   print(nrow(f_data))
@@ -232,7 +234,7 @@ observeEvent(input$photogo,{
   sig_num$Encounter_Type<-zoo::na.locf(sig_num$Encounter_Type, na.rm = FALSE)
   
   onoffsigs<-sig_num%>%
-    dplyr::select(signum, Datetime, Encounter_Type, Event_Type, Permit)%>%
+    dplyr::select(signum, Datetime, Encounter_Type, Event_Type, Permit, Species)%>%
     group_by(signum, Encounter_Type)%>%
     tidyr::pivot_wider(names_from = Event_Type, values_from = Datetime)%>%
     mutate(time_w = as.numeric(difftime(`Encounter END & DATA`,`Encounter START`), units = "mins"))%>%
@@ -241,6 +243,7 @@ observeEvent(input$photogo,{
   unique(onoffsigs$Permit)
   
   hours_wTt<-onoffsigs%>%
+    filter(Species == "Bottlenose")%>%
     group_by(Encounter_Type, Permit)%>%
     dplyr::summarise(Total_time = sum(time_w, na.rm=TRUE))%>%
     mutate(distance = case_when(
@@ -284,7 +287,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   PA_xlsx<-grep(PA_xlsx, pattern = "[~]", invert = T, value = T)
   
   PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000))
-  nrow(PA_merge[[2]])
+  #nrow(PA_merge[[2]])
   #nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
   head(allmerge)
