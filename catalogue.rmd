@@ -114,7 +114,7 @@ multiplot <- function(dolphin_name){
   
   cat("  \n  \n")
   
-  if (dolphin_name == "MENTRY"){
+  if (dolphin_name == "MAKO"){
     cat("\n\\newpage\n")
   }  
   
