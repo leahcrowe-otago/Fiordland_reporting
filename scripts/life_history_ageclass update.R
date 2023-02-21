@@ -47,7 +47,8 @@ lifehist%>%filter(NAME == "CORKSCREW")
 lifehist<-lifehist%>%
   mutate(POD = case_when(
     ENTRYNO < 2000 ~ 'DOUBTFUL',
-    ENTRYNO >= 2000 & ENTRYNO < 3000 ~ 'DUSKY'))%>%
+    ENTRYNO >= 2000 & ENTRYNO < 3000 ~ 'DUSKY',
+    ENTRYNO >= 3000 & ENTRYNO < 4000 ~ 'NORTHERN'))%>%
   left_join(last, by = c("NAME" = "ID_NAME"))%>%
   mutate(LAST_YEAR = case_when(
     !is.na(DEATH_YEAR) ~ as.character(DEATH_YEAR),
