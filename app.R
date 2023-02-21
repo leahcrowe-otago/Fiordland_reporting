@@ -13,15 +13,19 @@ ui <- dashboardPage(
   #sidebar content
   dashboardSidebar(
     sidebarMenu(
-      menuItem(icon = icon("camera"),"PA merge", tabName = "PAmerge")
+      menuItem(icon = icon("camera"),"PA merge", tabName = "PAmerge"),
+      menuItem(icon = icon("whale"),"IWC", tabName = "IWC")
     )                                     
   ),
   dashboardBody(
+    
+  tabItems(  
   tabItem(tabName = "PAmerge",
-          source('./scripts/PAmerge_app.R', local = TRUE)$value
-          )
+          source('./scripts/PAmerge_app.R', local = TRUE)$value),
+  tabItem(tabName = "IWC",
+          source('./scripts/IWC_app.R', local = TRUE)$value)
   
-  ))
+  )))
 
 server = function(input, output, session){}
 
