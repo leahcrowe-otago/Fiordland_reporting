@@ -6,33 +6,38 @@ library(dplyr)
 library(lubridate)
 
 ## pathway ----
-pharea = "Dusky"
+pharea = "Other Fiords/Survey data/"
 phyear = 2022
-phmonth = '07'
+phmonth = '12'
 phareafile = paste0(pharea,' Sound Dolphin Monitoring/')
 
 pathway<-paste0('//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland bottlenose dolphin/Long Term Monitoring/')
-pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
+pathimage<-paste0(pathway,pharea,phyear,'/',phyear,'_',phmonth)
 
 ## read GPX ----
-gpx_14Jul2022<-gpx::read_gpx(paste0(pathimage,"/Tracks/14_07_22transit.gpx"))
 
-tracks_14Jul2022<-gpx_14Jul2022$tracks$`14_07_22transit`
-head(tracks_14Jul2022)
+gpx_list<-list.files(paste0(pathimage,"/Tracks/"), pattern = "*.gpx", full.names = T, all.files = F)
+
+gpx<-lapply(gpx_list, function(x) gpx::read_gpx(x))
+typeof(gpx)
+gpx_tracks<-lapply(gpx, function(x) x$tracks)
+
+gpx_tracks<-bind_rows(unname(gpx[[1]]$tracks),unname(gpx[[2]]$tracks))
+
 
 ## filter for specific time period that is missing from Cybertracker ----
-charles_Nemo<-tracks_14Jul2022%>%
+missing_tracks<-gpx_tracks%>%
   mutate(gmt_datetime = ymd_hms(Time, tz = "GMT")) %>%
   mutate(nz_datetime = with_tz(gmt_datetime, tz = "Pacific/Auckland"))%>%
-  filter(nz_datetime >= "2022-07-14 10:12:30" & nz_datetime <= "2022-07-14 11:44:14")%>%
+  #filter(nz_datetime >= "2022-07-14 10:12:30" & nz_datetime <= "2022-07-14 11:44:14")%>%
   mutate(DATE = as.Date(nz_datetime, tz = "Pacific/Auckland"), TIME = format(nz_datetime, tz = "Pacific/Auckland", format = "%H:%M:%S %p"))%>%
   dplyr::select(nz_datetime, DATE, TIME, Latitude, Longitude)%>%
   dplyr::rename(Datetime = nz_datetime, LATITUDE = Latitude, LONGITUDE = Longitude)
 
-charles_Nemo
+missing_tracks
 
 ## plot ----
-leaflet(data = charles_Nemo) %>% 
+leaflet(data = missing_tracks) %>% 
   addEsriBasemapLayer(esriBasemapLayers$Oceans, autoLabels=TRUE) %>%
   addWMSTiles(
     "https://gis.ngdc.noaa.gov/arcgis/services/graticule/MapServer/WMSServer/",
@@ -46,4 +51,4 @@ leaflet(data = charles_Nemo) %>%
                    fillOpacity = 1)
 
 ## write csv ----
-write.csv(charles_Nemo, paste0(pathimage,"/Tracks/",phyear,"_",phmonth,"_missing.csv"), row.names = F, na = "")
+write.csv(missing_tracks, paste0(pathimage,"/Tracks/",phyear,"_",phmonth,"_missing.csv"), row.names = F, na = "")
