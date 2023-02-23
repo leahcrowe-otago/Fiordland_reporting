@@ -7,18 +7,18 @@ assign_ageclass<-function(x){
   x%>%
   mutate(
   this_year_age = case_when(
-    (!is.na(BIRTH_YEAR) | BIRTH_YEAR != '') ~ as.numeric(phyear) - as.numeric(BIRTH_YEAR)),
+    (!is.na(BIRTH_YEAR) | BIRTH_YEAR != '') ~ as.numeric(phyear_lh) - as.numeric(BIRTH_YEAR)),
   this_year_age_est = case_when(
-    (is.na(BIRTH_YEAR) | BIRTH_YEAR == '') ~ as.numeric(phyear) - as.numeric(FIRST_YEAR)),
+    (is.na(BIRTH_YEAR) | BIRTH_YEAR == '') ~ as.numeric(phyear_lh) - as.numeric(FIRST_YEAR)),
   this_year_ageclass = case_when(
-    (this_year_age >= 9 | this_year_age_est >= 8 | phyear >= FIRST_CALF) ~ 'A',
+    (this_year_age >= 9 | this_year_age_est >= 8 | phyear_lh >= FIRST_CALF) ~ 'A',
     (this_year_age < 9 & this_year_age >= 3) ~ 'S-A',
     (this_year_age < 3 & this_year_age > 0) ~ 'J',
     this_year_age == 0 ~ 'C',
     TRUE ~ 'U'))%>%
   mutate(this_year_ageclass = case_when(
-    as.numeric(phyear) < as.numeric(FIRST_YEAR) | as.numeric(phyear) < as.numeric(BIRTH_YEAR) ~ 'NA',
-    as.numeric(phyear) > as.numeric(DEATH_YEAR) ~ 'D',
+    as.numeric(phyear_lh) < as.numeric(FIRST_YEAR) | as.numeric(phyear_lh) < as.numeric(BIRTH_YEAR) ~ 'NA',
+    as.numeric(phyear_lh) > as.numeric(DEATH_YEAR) ~ 'D',
     TRUE ~ this_year_ageclass
   ))
 }
@@ -32,8 +32,8 @@ last<-pa_cy%>%
   group_by(ID_NAME)%>%
   dplyr::summarise(LAST_YEAR = as.character(max(CALFYEAR)), LAST_DATE = as.character(max(DATE)), FIRST_DATE = as.character(min(DATE)))
 
-phyear = min(lifehist_sql$FIRST_YEAR)
-print(phyear)
+phyear_lh = min(lifehist_sql$FIRST_YEAR)
+print(phyear_lh)
 
 mom_first_year<-lifehist_sql%>%filter(MOM != "")%>%group_by(MOM)%>%dplyr::summarise(FIRST_CALF = min(BIRTH_YEAR))
 lifehist_sql<-lifehist_sql%>%left_join(mom_first_year, by = c("NAME" = "MOM"))
@@ -60,13 +60,13 @@ lifehist<-lifehist%>%
   ))%>%
   dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, FIRST_DATE, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
 
-names(lifehist)[length(names(lifehist))]<-phyear
+names(lifehist)[length(names(lifehist))]<-phyear_lh
 
 ##after 1990
 
 for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
-  phyear = i
-  print(phyear)
+  phyear_lh = i
+  print(phyear_lh)
   print(year(Sys.Date()))
   
   lifehist<-assign_ageclass(lifehist)
@@ -74,7 +74,7 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
   lifehist<-lifehist%>%
     dplyr::select(-this_year_age, -this_year_age_est)
 
-  names(lifehist)[length(names(lifehist))]<-phyear
+  names(lifehist)[length(names(lifehist))]<-phyear_lh
   lifehist
 }
 
