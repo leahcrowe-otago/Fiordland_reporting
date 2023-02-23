@@ -22,10 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 # 
-pharea = "Other"
-phyear = 2022
-phmonth = '11'
-phserv = "Local"
+# pharea = "Other"
+# phyear = 2022
+# phmonth = '11'
+# phserv = "Local"
 
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -39,7 +39,7 @@ phserv = "Local"
       } else if (phserv == 'Local'){
       pathway<-input$filepathinput
       #pathway<-"C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/"
-      #pathimage<-paste0(pathway,'Other Fiords/',phyear,'/',phyear,'_',phmonth)
+      ###pathimage<-paste0(pathway,'Other Fiords/',phyear,'/',phyear,'_',phmonth)
       pathimage<-paste0(pathway,phyear,'/',phyear,'_',phmonth)
       }
   
@@ -50,6 +50,8 @@ phserv = "Local"
   ##########################
   print("sigs and trackline")
   
+  if (input$surveydata_file == "compile"){
+    
   sigs<-read.csv(paste0(pathimage,"/Sightings/f_",phyear,"_",phmonth," CyberTracker.csv"), header = T, stringsAsFactors = F)
   sigs<-sigs%>%mutate(Datetime = dmy_hms(paste(Date, Time)))%>%
     dplyr::select(Datetime, everything())
@@ -119,16 +121,28 @@ phserv = "Local"
     missing_tracks<-read.csv(paste0(pathimage,"/Tracks/",phyear,"_",phmonth,"_missing.csv"), header = T, stringsAsFactors = F)
     missing_tracks$Datetime<-ymd_hms(missing_tracks$Datetime)
     missing_tracks$DATE<-ymd(missing_tracks$DATE)
-    
+    unique(missing_tracks$DATE)
     missing_sigs<-read.csv(paste0(pathimage,"/Sightings/f_",phyear,"_",phmonth," CyberTracker_missing.csv"), header = T, stringsAsFactors = F)
-    missing_sigs<-missing_sigs%>%mutate(Datetime = ymd_hms(paste(Date, Time)))%>%
+    missing_sigs<-missing_sigs%>%mutate(Datetime = dmy_hms(paste(Date, Time)))%>%
       dplyr::select(Datetime, everything())
     
-    missing_sigs$Date<-ymd(missing_sigs$Date)
+    missing_sigs$Date<-dmy(missing_sigs$Date)
     #find nearest position for time changes ----
     
     data.table::setDT(missing_sigs)[,  Latitude := data.table::setDT(missing_tracks)[missing_sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
     data.table::setDT(missing_sigs)[,  Longitude := data.table::setDT(missing_tracks)[missing_sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
+    
+    ##get bin list using seq for every 10 seconds
+    ##order by DateTime and rank
+    missing_tracks<-missing_tracks %>% 
+      mutate(tracksbin = cut(missing_tracks$Datetime, breaks = c(seq(from = missing_tracks$Datetime[1], to = missing_tracks$Datetime[nrow(missing_tracks)], by = 10)))) %>%
+      arrange(Datetime, tracksbin) %>% 
+      group_by(tracksbin) %>% 
+      mutate(rank=rank(Datetime, ties.method = "first"))%>% 
+      filter(rank == 1)%>%
+      ungroup()%>%
+      dplyr::select(-tracksbin, -rank)
+    
     
     f_data_missing<-missing_tracks%>%
       full_join(missing_sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
@@ -139,7 +153,7 @@ phserv = "Local"
       
     f_data<-f_data%>%
       bind_rows(f_data_missing)
-    
+    #f_data<-f_data_missing
   }
   
   
@@ -149,6 +163,7 @@ phserv = "Local"
   onoffeffort<-f_data%>%
     filter(grepl('Effort',Effort))%>%
     distinct(DATE, Datetime)%>%
+    filter(!is.na(Datetime))%>%
     #ungroup()%>%
     mutate(Event = as.numeric(rep(1:(n()/2),each = 2)))%>%
     group_by(Event)%>%
@@ -196,17 +211,45 @@ phserv = "Local"
                   Beaufort, Swell, Glare, Visibility, Overall, SST, Depth, Note, Event, Tawaki, -grp)%>%
     dplyr::rename(Date = DATE, Time = TIME, Latitude = LATITUDE, Longitude = LONGITUDE, Sighting_Number = signum)
      
-  sig_count<-max(f_data$Sighting_Number, na.rm = T)
-
-  sig_days<-sig_num%>%
-    distinct(DATE)
-  
-  nrow(f_data)
+    nrow(f_data)
   
   f_data$Platform<-zoo::na.locf(f_data$Platform, na.rm = FALSE)
   
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
-  write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",pharea,".csv"), row.names = F, na = "")
+  write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",".csv"), row.names = F, na = "")
+  } else {
+    
+  f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = F)
+  head(f_data)
+  
+  #f_data$Datetime<-dmy_hms(f_data$Datetime)
+  
+  sig_num<-f_data%>%
+    filter(grepl("Encounter", Event_Type))%>%
+    arrange(desc(Datetime))%>%
+    dplyr::rename("signum" = "Sighting_Number", "DATE" = "Date")
+  
+  onoffeffort<-f_data%>%
+    filter(grepl('Effort',Effort))%>%
+    dplyr::rename("DATE" = "Date")%>%
+    distinct(DATE, Datetime)%>%
+    filter(!is.na(Datetime))%>%
+    #ungroup()%>%
+    mutate(Event = as.numeric(rep(1:(n()/2),each = 2)))%>%
+    group_by(Event)%>%
+    mutate(min = min(Datetime),
+           max = max(Datetime))%>%
+    dplyr::select(-Datetime)%>%
+    distinct()%>%  
+    as.data.frame()
+  
+  }
+  
+  sig_count<-max(f_data$Sighting_Number, na.rm = T)
+  
+  sig_days<-sig_num%>%
+    distinct(DATE)
+  
   print(nrow(f_data))
 
   incProgress(3/5)
@@ -226,12 +269,15 @@ phserv = "Local"
   print(f_data_dist%>%filter(dist_km > 0.1)%>%as.data.frame())
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
   
-  sig_num$Permit[sig_num$Permit==""] <- NA
-  
   #order events in ascending order for Last Observation Carried Forward
+  sig_num$Permit[sig_num$Permit==""] <- NA
+  sig_num$Encounter_Type[sig_num$Encounter_Type==""] <- NA
+  
   sig_num<-sig_num%>%arrange(signum,Datetime)
+  
   sig_num$Permit<-zoo::na.locf(sig_num$Permit, na.rm = FALSE)
   sig_num$Encounter_Type<-zoo::na.locf(sig_num$Encounter_Type, na.rm = FALSE)
+  head(sig_num)
   
   onoffsigs<-sig_num%>%
     dplyr::select(signum, Datetime, Encounter_Type, Event_Type, Permit, Species)%>%
@@ -303,7 +349,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   
   #list folders that start with the year
   folder.list<-list.files(pathimage, pattern = paste0("^",phyear), full.names = T)
-  filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$", full.names = T, recursive = T))
+  filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$|*.CR2$", full.names = T, recursive = T))
   filenames_unlist<-unlist(filenames, use.names = F)
   head(filenames_unlist)
   allphotod_df<-data.frame(fullfilename = as.vector(filenames_unlist),
@@ -651,16 +697,15 @@ incProgress(4/5)
   date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
 
 if (map_species == "no"){  
-  species_shape<-c(23)#,24)
-  names(species_shape)<-c("Bottlenose")#,"Humpback")
+  species_shape<-c(23,24)
+  names(species_shape)<-c("Bottlenose","Unknown large whale")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
 } else if (map_species == "yes"){
-  
   species_shape<-c(23,24,21,22,25)
   names(species_shape)<-c("Bottlenose","Common","Dusky","Shepherd's","Hector's")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
-  
 }
+  
 effmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
   geom_point(f_data%>%arrange(Datetime), mapping = aes(Longitude, Latitude, group = Date, color = Date), size = 0.1)+
@@ -677,6 +722,8 @@ effmap<-ggplot()+
 legend<-cowplot::get_legend(effmap)
 
 effmap<-effmap+theme(legend.position = "none")
+
+f_data%>%filter(!is.na(Encounter_Type))
 
 sigmap<-ggplot()+
   geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
