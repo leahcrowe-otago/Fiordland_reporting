@@ -18,7 +18,8 @@ fluidPage(
                                                            "Tamatea-Dusky" = "Tamatea-Dusky complex",
                                                            "Taiari-Chalky" = "Taiari-Chalky Inlet",
                                                            "Rakituma-Preservation" = "Rakituma-Preservation Inlet"), multiple = T),
-      radioButtons("EXIF", "collect EXIF data, or load file?", choices = c("collect","load"), selected = "load", inline = FALSE),
+      radioButtons("surveydata_file", "Compile survey data or load file?", choices = c("compile","load"), selected = "load", inline = FALSE),
+      radioButtons("EXIF", "collect EXIF data or load file?", choices = c("collect","load"), selected = "load", inline = FALSE),
       actionButton("photogo", "Go"),
       br(),
       textOutput("error")
