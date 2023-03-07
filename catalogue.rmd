@@ -43,7 +43,7 @@ photo_df<-photo_df%>%
 #########
 
 multiplot <- function(dolphin_name){
-  #dolphin_name = "ALYSA"
+
   cat(glue::glue("#### {dolphin_name}  \n \n"))
   
   photo_per_dolphin <- photo_df %>% 
@@ -117,125 +117,6 @@ multiplot <- function(dolphin_name){
   if (dolphin_name == "MAKO"){
     cat("\n\\newpage\n")
   }  
-  
-# if (area == "Dusky"){
-# 
-  # if (dolphin_name == "BAN"){
-  #   cat("\n\\newpage\n")
-  # }
-#   
-#   if (dolphin_name == "DIVIDE"){
-#     cat("\n\\newpage\n")
-#   }
-# 
-#   if (dolphin_name == "DUSK"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#     if (dolphin_name == "GAMBLE"){
-#   cat("\n\\newpage\n")
-#     } 
-#   
-#   if (dolphin_name == "HOLY"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#   if (dolphin_name == "INKA"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#   if (dolphin_name == "NOIR"){
-#     cat("\n\\newpage\n")
-#   }  
-# 
-#     if (dolphin_name == "PAW"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#     if (dolphin_name == "PONCHO"){
-#     cat("\n\\newpage\n")
-#   }
-#       
-#   if (dolphin_name == "QUIVER"){
-#     cat("\n\\newpage\n")
-#       }
-#   
-#   if (dolphin_name == "ROOSTER"){
-#     cat("\n\\newpage\n")
-#   }
-#     if (dolphin_name == "STING"){
-#     cat("\n\\newpage\n")
-#     }
-#     if (dolphin_name == "TAMALE"){
-#     cat("\n\\newpage\n")
-#     }
-#       if (dolphin_name == "VOID"){
-#     cat("\n\\newpage\n")
-#   }
-#       if (dolphin_name == "BEE"){
-#     cat("\n\\newpage\n")
-#       }
-#       if (dolphin_name == "BOWTIE"){
-#     cat("\n\\newpage\n")
-#       }
-#       if (dolphin_name == "BUENOS"){
-#     cat("\n\\newpage\n")
-#       }
-#       if (dolphin_name == "CLAW"){
-#     cat("\n\\newpage\n")
-#       }
-#       if (dolphin_name == "CV122"){
-#     cat("\n\\newpage\n")
-#       }
-#       if (dolphin_name == "DUB"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-# }
-#   
-# if (area == "Doubtful"){  
-#   
-#   if (dolphin_name == "BOBA"){
-#     cat("\n\\newpage\n")
-#   }
-# 
-#   if (dolphin_name == "CORKSCREW"){
-#     cat("\n\\newpage\n")
-#   }
-# 
-#   if (dolphin_name == "FRISBEE"){
-#     cat("\n\\newpage\n")
-#   }
-# 
-#   if (dolphin_name == "MENTRY"){
-#     cat("\n\\newpage\n")
-#   }
-# 
-#   if (dolphin_name == "POOH"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#   if (dolphin_name == "VORTEX"){
-#     cat("\n\\newpage\n")
-#     }
-#   
-#   if (dolphin_name == "MUS"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#   if (dolphin_name == "PIGLET"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#   if (dolphin_name == "SEAL"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-#     if (dolphin_name == "UPBANG"){
-#     cat("\n\\newpage\n")
-#   }
-#   
-# }
   
 }
 
