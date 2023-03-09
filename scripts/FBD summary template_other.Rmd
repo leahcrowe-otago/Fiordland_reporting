@@ -32,8 +32,8 @@ header-includes:
 
 ```{r hours, echo=FALSE}
 
-hours_100<-hours_wTt%>%filter(distance == '<100')
-hours_100400<-hours_wTt%>%filter(distance != '<100')
+hours_100<-params$hours_wTt%>%filter(distance == '<100')
+hours_100400<-params$hours_wTt%>%filter(distance != '<100')
 
 ```
 \vspace*{-5mm}
@@ -44,10 +44,10 @@ Trip dates: \hfill `r params$tripdate_s` – `r params$tripdate_e`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Research team: 
-\vspace*{-9mm} \begin{flushright} 
+\vspace*{-7mm} \begin{flushright} 
 `r params$crew`
 \end{flushright}
-\vspace*{-4mm}
+\vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Vessel: \hfill `r params$vessel`
 \vspace*{-1mm}
@@ -75,11 +75,19 @@ Total time (hrs) with dolphins within 100–400 m (DOC permit): \hfill `r hours_
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
 \vspace*{-5mm}
-```{r effort_map, echo=FALSE, fig.align='center', out.width='100%'}
+```{r effort_map, echo=FALSE, out.width='100%', fig.align='center'}
 knitr::include_graphics("./figures/map.png")
 ```
-\vspace*{-5mm}
-Fig. 1. Maps of survey effort (a) and dolphins sightings (b) during this research effort. a) Initial dolphin sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with dolphins. 
+\vspace*{-8mm}
+```{r legend, echo=FALSE, out.width='100%', fig.align='center'}
+knitr::include_graphics("./figures/legend.png")
+```
+\vspace*{-15mm}
+```{r legend_sig, echo=FALSE, out.width='85%', out.height='85%', fig.align='center'}
+knitr::include_graphics("./figures/legend_sig.png")
+```
+\vspace*{-15mm}
+Fig. 1. Maps of survey effort (a) and cetacean sightings (b) where initial sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with the animals. 
 \newpage
 \vspace*{5mm}
 \vspace*{-5mm}
@@ -110,7 +118,7 @@ knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", b
 ### Comments:
 `r params$wx_comments`
 
-*`r params$calf_comments`
+`r params$calf_comments`
 
 `r params$next_comments`
 
