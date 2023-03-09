@@ -101,8 +101,7 @@ knitr::include_graphics("./figures/legend.png")
 knitr::include_graphics("./figures/legend_sig.png")
 ```
 \vspace*{-15mm}
-Fig. 1. Maps of survey effort (a) and cetacean sightings (b) during this research effort. a) Initial sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with the animals. 
-\newpage
+Fig. 1. Maps of survey effort (a) and cetacean sightings (b) where initial sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with the animals. 
 \vspace*{5mm}
 \vspace*{-5mm}
 
