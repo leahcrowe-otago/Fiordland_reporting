@@ -22,10 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
 # 
-# pharea = "Other"
+# pharea = "Dusky"
 # phyear = 2022
 # phmonth = '11'
-# phserv = "Local"
+# phserv = "Network"
 
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -59,8 +59,23 @@ observeEvent(input$photogo,{
   
   daterange<-range(sigs$Datetime)
   
-  raw_tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
+  if(pharea == "Dusky" & phyear == 2022 & phmonth == '11'){
+  
+    raw_tracks1<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth," FBD"), quiet = T)
+    raw_tracks2<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth," FBD 2022-11-08"), quiet = T)
 
+    raw_tracks<-as.data.frame(raw_tracks1)%>%
+      mutate(SST = as.character(SST),
+             DEPTH = as.numeric(DEPTH))%>%
+      bind_rows(as.data.frame(raw_tracks2))
+    
+    
+  } else {
+    
+    raw_tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
+  
+    }
+  
   if (phyear < 2022){
     raw_tracks<-raw_tracks%>%
       dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
@@ -332,7 +347,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   #exclude weird hidden excel files
   PA_xlsx<-grep(PA_xlsx, pattern = "[~]", invert = T, value = T)
   
-  PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000))
+  head(PA_xlsx[1])
+  
+  PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000, range = cellranger::cell_cols("A:G")))
   #nrow(PA_merge[[2]])
   #nrow(PA_merge[[2]])
   allmerge<-do.call(rbind, PA_merge)
