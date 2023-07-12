@@ -1,17 +1,18 @@
 library(ggplot2);library(sf);library(rgdal);library(raster);library(ggpolypath);library(ggrepel)
 
-NZ_coast<-readOGR("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
-NZ_lakes<-readOGR("./shapefiles", layer = "nz-lake-polygons-topo-150k")
+NZ_coast<-readOGR("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k") #https://data.linz.govt.nz/layer/51560-nz-coastlines-and-islands-polygons-topo-1500k/
+NZ_lakes<-readOGR("./shapefiles", layer = "nz-lake-polygons-topo-150k") #https://data.linz.govt.nz/layer/50293-nz-lake-polygons-topo-150k/
 big_lakes<-subset(NZ_lakes, !is.na(name_ascii))
-protected_areas<-readOGR("./shapefiles", layer = "protected-areas")
+protected_areas<-readOGR("./shapefiles", layer = "protected-areas") #https://data.linz.govt.nz/layer/53564-protected-areas/
 CRS.latlon<-CRS("+proj=longlat +datum=WGS84 +no_defs")
 protected_areas<-sp::spTransform(protected_areas, CRS.latlon)
 natpark<-subset(protected_areas, (section == "s.4 - National Park"))
 mpa<-subset(protected_areas, (section == "s.3 - Marine Reserve"))
 
+#World Heritage Site
 WHS<-readOGR("./shapefiles", layer = "WDPA_WDOECM_Jul2021_Public_26652_shp-polygons")
-bathy<-readOGR("./shapefiles", layer = "NZBathy_2016_contours")
 
+bathy<-readOGR("./shapefiles", layer = "NZBathy_2016_contours") #https://koordinates.com/layer/8677-niwa-new-zealand-bathymetry-contours-2016/
 alliso50<-sp::spTransform(subset(bathy, ELEVATION == -50), CRS.latlon)
 alliso200<-sp::spTransform(subset(bathy, ELEVATION == -200), CRS.latlon)
 alliso1000<-sp::spTransform(subset(bathy, ELEVATION == -1000), CRS.latlon)
