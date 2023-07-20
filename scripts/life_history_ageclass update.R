@@ -1,7 +1,6 @@
 library(odbc);library(dplyr);library(DBI);library(lubridate)
 
-source('~/Documents/git_otago/Fiordland_reporting/scripts/connect to MySQL.R', local = TRUE)$value
-#lifehist<-dbReadTable(con, "age_sex")
+source('C:/Users/leahm/Documents/git-otago/Fiordland_reporting/scripts/connect to MySQL.R', local = TRUE)$value
 
 assign_ageclass<-function(x){
   x%>%
@@ -83,7 +82,7 @@ TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="var
              BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", FIRST_DATE="varchar(10)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", 
              LAST_DATE="varchar(10)") 
 
-lifehist_sql<-dbWriteTable(con, name = "life_history_ageclass", value = lifehist, field.types = TYPES, row.names = FALSE, overwrite = T)
+#lifehist_sql<-dbWriteTable(con, name = "life_history_ageclass", value = lifehist, field.types = TYPES, row.names = FALSE, overwrite = T)
 
 ##once last_year is integrated, need to make some changes to the above so age class is only populated between birth/first and last  
 
