@@ -23,8 +23,8 @@ observeEvent(input$photogo,{
   #print(phfile)
 # 
 # pharea = "Dusky"
-# phyear = 2022
-# phmonth = '11'
+# phyear = 2023
+# phmonth = '03'
 # phserv = "Network"
 
   if(pharea == "Other"){
@@ -314,7 +314,7 @@ observeEvent(input$photogo,{
     group_by(Permit, distance)%>%
     dplyr::summarise(Total_time_dist = round(sum(Total_time, na.rm = TRUE)/60,1))%>%
     ungroup()%>%
-    tidyr::pivot_wider(distance, names_from = Permit, values_from = Total_time_dist)%>%
+    tidyr::pivot_wider(id_cols = distance, names_from = Permit, values_from = Total_time_dist)%>%
     replace(is.na(.), 0)%>%
     mutate(`DOC permit` = if (exists('DOC permit', where=.)) `DOC permit` else 0)%>%
     mutate(`Otago permit` = if (exists('Otago permit', where=.)) `Otago permit` else 0)%>%
@@ -401,6 +401,8 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   incProgress(1/5)
   print("getting exif data")
   #get exif data
+  #http://web.mit.edu/graphics/src/Image-ExifTool-6.99/html/install.html
+  #https://strawberryperl.com/
   metadata<-exifr::read_exif(files_for_exif$fullfilename, tags = c("filename", "DateTimeOriginal"))
   print(metadata)
   ##
@@ -494,9 +496,11 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   #fiordland_bottlenose.life_history_ageclass
   source('./scripts/connect to MySQL.R', local = TRUE)$value
   source('./scripts/life_history_ageclass update.R', local = TRUE)$value
-  lifehist<-dbReadTable(con, "life_history_ageclass")
+  #lifehist<-dbReadTable(con, "life_history_ageclass")
+  head(lifehist)
   #print(lifehist)
   #phyear gets updated to calf year in the "life_history_ageclass.R" run
+  #phyear<-2023
   print(phyear)
   lhyear = phyear
   
@@ -507,6 +511,8 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     filter(across(last_col()) != 'NA' & across(last_col()) != 'D')
   
   print(lifehist)
+  
+  lifehist%>%filter(NAME == "BOWTIE")
   
   if (pharea != "Other"){
     lifehist<-lifehist%>%filter(POD == toupper(pharea))
