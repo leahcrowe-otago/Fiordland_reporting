@@ -1,6 +1,6 @@
 library(odbc);library(dplyr);library(DBI);library(lubridate)
 
-source('C:/Users/leahm/Documents/git-otago/Fiordland_reporting/scripts/connect to MySQL.R', local = TRUE)$value
+source('./scripts/connect to MySQL.R', local = TRUE)$value
 
 assign_ageclass<-function(x){
   x%>%
