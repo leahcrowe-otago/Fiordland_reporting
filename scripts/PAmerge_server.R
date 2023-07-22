@@ -494,7 +494,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   ##################
   
   #fiordland_bottlenose.life_history_ageclass
-  source('./scripts/connect to MySQL.R', local = TRUE)$value
+  #source('./scripts/connect to MySQL.R', local = TRUE)$value
   source('./scripts/life_history_ageclass update.R', local = TRUE)$value
   #lifehist<-dbReadTable(con, "life_history_ageclass")
   head(lifehist)
@@ -711,7 +711,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   ## MAP ##
   #########
   
-  NZ_coast<-readOGR("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
+NZ_coast<-sf::read_sf(dsn = "./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
+
+NZ_coast<-as.data.frame(st_coordinates(NZ_coast))
   
 incProgress(4/5)
 
@@ -730,7 +732,7 @@ if (map_species == "no"){
 }
   
 effmap<-ggplot()+
-  geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
+  geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
   geom_point(f_data%>%arrange(Datetime), mapping = aes(Longitude, Latitude, group = Date, color = Date), size = 0.1)+
   #geom_path(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE))+
   theme_bw()+
@@ -749,7 +751,7 @@ effmap<-effmap+theme(legend.position = "none")
 f_data%>%filter(!is.na(Encounter_Type))
 
 sigmap<-ggplot()+
-  geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.8)+
+  geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
   #path
   geom_point(f_data%>%filter(!is.na(Encounter_Type)), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
   #start point
