@@ -86,3 +86,4 @@ TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="var
 
 ##once last_year is integrated, need to make some changes to the above so age class is only populated between birth/first and last  
 
+dbDisconnect(con)
