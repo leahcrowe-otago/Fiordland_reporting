@@ -1,24 +1,32 @@
 library(ggplot2);library(sf);library(rgdal);library(raster);library(ggpolypath);library(ggrepel)
 
-NZ_coast<-readOGR("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k") #https://data.linz.govt.nz/layer/51560-nz-coastlines-and-islands-polygons-topo-1500k/
-NZ_lakes<-readOGR("./shapefiles", layer = "nz-lake-polygons-topo-150k") #https://data.linz.govt.nz/layer/50293-nz-lake-polygons-topo-150k/
+NZ_coast<-sf::read_sf("./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k") #https://data.linz.govt.nz/layer/51560-nz-coastlines-and-islands-polygons-topo-1500k/
+#NZ_coast<-as.data.frame(st_coordinates(NZ_coast))
+
+NZ_lakes<-sf::read_sf("./shapefiles", layer = "nz-lake-polygons-topo-150k") #https://data.linz.govt.nz/layer/50293-nz-lake-polygons-topo-150k/
 big_lakes<-subset(NZ_lakes, !is.na(name_ascii))
-protected_areas<-readOGR("./shapefiles", layer = "protected-areas") #https://data.linz.govt.nz/layer/53564-protected-areas/
-CRS.latlon<-CRS("+proj=longlat +datum=WGS84 +no_defs")
-protected_areas<-sp::spTransform(protected_areas, CRS.latlon)
+
+protected_areas<-sf::read_sf("./shapefiles", layer = "protected-areas") #https://data.linz.govt.nz/layer/53564-protected-areas/
+#CRS.latlon<-CRS("+proj=longlat +datum=WGS84 +no_defs")
+#protected_areas<-sp::spTransform(protected_areas, CRS.latlon)
 natpark<-subset(protected_areas, (section == "s.4 - National Park"))
 mpa<-subset(protected_areas, (section == "s.3 - Marine Reserve"))
 
-#World Heritage Site
-WHS<-readOGR("./shapefiles", layer = "WDPA_WDOECM_Jul2021_Public_26652_shp-polygons")
 
-bathy<-readOGR("./shapefiles", layer = "NZBathy_2016_contours") #https://koordinates.com/layer/8677-niwa-new-zealand-bathymetry-contours-2016/
-alliso50<-sp::spTransform(subset(bathy, ELEVATION == -50), CRS.latlon)
-alliso200<-sp::spTransform(subset(bathy, ELEVATION == -200), CRS.latlon)
-alliso1000<-sp::spTransform(subset(bathy, ELEVATION == -1000), CRS.latlon)
+#World Heritage Site - https://www.protectedplanet.net/26652
+WHS<-sf::read_sf("./shapefiles", layer = "WDPA_WDOECM_Jul2023_Public_26652_shp-polygons")
 
+#isobaths
+bathy<-sf::read_sf("./shapefiles", layer = "niwa-new-zealand-bathymetry-contours-2016") #https://koordinates.com/layer/8677-niwa-new-zealand-bathymetry-contours-2016/
+alliso50<-subset(bathy, ELEVATION == -50)
+alliso50<-as.data.frame(st_coordinates(alliso50))
+alliso200<-subset(bathy, ELEVATION == -200)
+alliso200<-as.data.frame(st_coordinates(alliso200))
+alliso1000<-subset(bathy, ELEVATION == -1000)
+alliso1000<-as.data.frame(st_coordinates(alliso1000))
+#
 base<-ggplot()+
-  geom_polygon(NZ_coast, mapping = aes(long,lat,group = group), alpha = 0.9, fill = "white")+
+  geom_sf(data = NZ_coast, alpha = 0.9, fill = "white")+
   theme(panel.background = element_rect(fill = "lightblue"),
         panel.grid.major = element_line(size = 0.1, linetype = 'solid', colour = "black"), 
         panel.border = element_rect(colour = "black", fill=NA, size=1))+
@@ -47,18 +55,18 @@ TeWah_fill = c("Marine Reserve" = "orange", "Te Wahipounamu" = "forestgreen")
 TeWah_color = c("National Park" = "darkgreen")
 
 TeWah<-base+
-  geom_polypath(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
-  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
-  geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.2)+
-  geom_polypath(WHS, mapping = aes(long,lat,group = group, fill = "Te Wahipounamu"), alpha = 0.5)+
-  geom_path(natpark, mapping = aes(long,lat,group = group, color = "National Park"), alpha = 1, fill = NA, size = 0.1)+
-  geom_polypath(big_lakes, mapping = aes(long,lat,group = group), alpha = 0.6, fill = "blue")+
+  scale_fill_manual(values = TeWah_fill)+
+  scale_color_manual(values = TeWah_color)+
+  geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso1000, mapping = aes(X,Y,group = L2), color = "steelblue2", alpha = 0.7, size = 0.2)+
+  geom_sf(data = WHS, aes(fill = "Te Wahipounamu"), alpha = 0.5)+
+  geom_sf(data = natpark, aes(color = "National Park"), alpha = 1, fill = NA, linewidth = 0.1)+
+  geom_sf(data = mpa, aes(fill = "Marine Reserve"), alpha = 1)+
+  geom_sf(data = big_lakes, alpha = 0.6, fill = "blue")+
   geom_point(TeWah_points, mapping = aes(lon, lat), size = 0.5, color = "black", shape = 21)+
   coord_sf(xlim = c(166,171), ylim = c(-47.25,-43), crs = 4269)+
   geom_text_repel(data = TeWah_labels, aes(x = lon, y = lat, label = label), size = 2, min.segment.length = 0, nudge_y = c(0.15,0.65), nudge_x = c(1,-1.9))+
   geom_text_repel(data = TeWah_points, aes(x = lon, y = lat, label = label), size = 1.75, min.segment.length = 0.5, nudge_y = c(-0.25,0.09,-0.04), nudge_x = c(1,0.5,-0.5))+
-  scale_fill_manual(values = TeWah_fill)+
-  scale_color_manual(values = TeWah_color)+
   theme(legend.position = c(0.83, 0.08),
         legend.title = element_blank(),
         legend.margin = margin(c(1, 1, 1, 1)),
@@ -74,8 +82,9 @@ TeWahNZ<-cowplot::ggdraw() +
   cowplot::draw_plot(TeWah) +
   cowplot::draw_plot(NZ, x = 0.35, y = 0.68, width = 0.2, height = 0.3)
 
-ggsave("./figures/TeWahNZ.svg", TeWahNZ, dpi = 320, width = 250, units = 'mm')
+ggsave("./figures/TeWahNZ.svg", TeWahNZ, dpi = 320)
 
+##
 
 fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound","Te H\u101pua-Sutherland Sound",
                                    "H\u101wea-Bligh Sound","Te Houhou-George Sound","Taitetimu-Caswell Sound",
@@ -99,10 +108,10 @@ fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound",
 fiord_fill = c("Marine Reserve" = "orange")
 
 fiords<-base+
-  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
-  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
-  geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.2)+
-  geom_polypath(big_lakes, mapping = aes(long,lat,group = group), alpha = 0.6, fill = "blue")+
+  geom_polygon(mpa, mapping = aes(X,Y,group = L2, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso1000, mapping = aes(X,Y,group = L2), color = "steelblue2", alpha = 0.7, size = 0.2)+
+  geom_polypath(big_lakes, mapping = aes(X,Y,group = L2), alpha = 0.6, fill = "blue")+
   coord_sf(xlim = c(166.0,168), ylim = c(-46.2,-44.5), crs = 4269)+
   scale_fill_manual(values = fiord_fill)+
   theme(legend.position = c(0.83, 0.12),
@@ -136,9 +145,9 @@ ST<-data.frame(lat = c(-46.035,-46.08,-45.395,-45.395,-45.105,-45.1), lon = c(16
 type_color = c("SoundTrap" = "red","FPOD" = "purple")
 
 chalk_pres<-base+
-  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
-  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
-  geom_path(alliso50, mapping = aes(long,lat,group = group), color = "black", alpha = 0.9, size = 0.2)+
+  geom_polygon(mpa, mapping = aes(X,Y,group = L2, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso50, mapping = aes(X,Y,group = L2), color = "black", alpha = 0.9, size = 0.2)+
   scale_fill_manual(values = fiord_fill)+
   theme(legend.position = c(0.83, 0.12),
         legend.title = element_blank(),
@@ -155,9 +164,9 @@ chalk_pres<-base+
   scale_color_manual(values = type_color)
 
 midfiord<-base+
-  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
-  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.2)+
-  geom_path(alliso50, mapping = aes(long,lat,group = group), color = "black", alpha = 0.9, size = 0.2)+
+  geom_polygon(mpa, mapping = aes(X,Y,group = L2, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.2)+
+  geom_path(alliso50, mapping = aes(X,Y,group = L2), color = "black", alpha = 0.9, size = 0.2)+
   scale_fill_manual(values = fiord_fill)+
   theme(legend.position = c(0.83, 0.12),
     legend.title = element_blank(),
@@ -191,9 +200,9 @@ doubt_dusk_labels<-data.frame(label = c("Te Awa-o-T\u16b-Thompson Sound",
                                  166.67, 166.47))
 
 doubt_dusk<-base+
-  geom_polygon(mpa, mapping = aes(long,lat,group = group, fill = "Marine Reserve"), alpha = 1)+
-  geom_path(alliso200, mapping = aes(long,lat,group = group), color = "steelblue", alpha = 0.7, size = 0.4)+
-  geom_path(alliso1000, mapping = aes(long,lat,group = group), color = "steelblue2", alpha = 0.7, size = 0.4)+
+  geom_polygon(mpa, mapping = aes(X,Y,group = L2, fill = "Marine Reserve"), alpha = 1)+
+  geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.4)+
+  geom_path(alliso1000, mapping = aes(X,Y,group = L2), color = "steelblue2", alpha = 0.7, size = 0.4)+
   scale_fill_manual(values = fiord_fill)+
   theme(#legend.position = c(0.23, 0.94),
         legend.position = "none",
