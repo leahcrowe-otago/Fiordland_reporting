@@ -21,7 +21,7 @@ observeEvent(input$photogo,{
   #print(phserv)
   #print(phyear)
   #print(phfile)
-# 
+ 
 # pharea = "Dusky"
 # phyear = 2023
 # phmonth = '03'
@@ -236,6 +236,7 @@ observeEvent(input$photogo,{
     
   f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = F)
   head(f_data)
+  f_data[f_data == ''] <- NA
   
   #f_data$Datetime<-dmy_hms(f_data$Datetime)
   
@@ -712,8 +713,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   #########
   
 NZ_coast<-sf::read_sf(dsn = "./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
-
-NZ_coast<-as.data.frame(st_coordinates(NZ_coast))
+#NZ_coast<-as.data.frame(st_coordinates(NZ_coast))
   
 incProgress(4/5)
 
@@ -732,7 +732,8 @@ if (map_species == "no"){
 }
   
 effmap<-ggplot()+
-  geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
+  #geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
+  geom_sf(data = NZ_coast, alpha = 0.9, fill = "grey")+
   geom_point(f_data%>%arrange(Datetime), mapping = aes(Longitude, Latitude, group = Date, color = Date), size = 0.1)+
   #geom_path(f_data%>%arrange(Datetime), mapping = aes(LON, LAT, group = DATE, color = DATE))+
   theme_bw()+
@@ -751,9 +752,10 @@ effmap<-effmap+theme(legend.position = "none")
 f_data%>%filter(!is.na(Encounter_Type))
 
 sigmap<-ggplot()+
-  geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
+  geom_sf(data = NZ_coast, alpha = 0.9, fill = "grey")+
+  #geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
   #path
-  geom_point(f_data%>%filter(!is.na(Encounter_Type)), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
+  geom_point(f_data%>%filter(!is.na(Encounter_Type) | Event_Type == 'Encounter END & DATA'), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
   #start point
   geom_point(f_data%>%filter(Event_Type == 'Encounter START' & Encounter_Type == 'Initial'), mapping = aes(Longitude, Latitude, color = Date, shape = Species), fill = "red", size = 1.5, stroke = 1.5)+
   theme_bw()+
@@ -887,7 +889,8 @@ sigmap<-sigmap+theme(legend.position = "none")
                     vessel = vessel, crew = crew, pop_est = pop_est, trip_cap = trip_cap,
                     track_dist = track_dist, sig_days = sig_days, sig_count = sig_count, hours_wTt = hours_wTt, 
                     age_sex_table = age_sex_table, unseen_table = unseen_table, unseen_names = unseen_names,
-                    wx_comments = wx_comments, calf_comments = calf_comments, next_comments = next_comments)
+                    wx_comments = wx_comments, calf_comments = calf_comments, next_comments = next_comments,
+                    pharea = pharea)
       print(params)
       rmarkdown::render(tempReport, output_file = file,
                    params = params,
