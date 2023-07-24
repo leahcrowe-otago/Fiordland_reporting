@@ -11,12 +11,12 @@ library(glue)
 library(stringr)
 library(lubridate)
 
-area<-"Doubtful"
-#area<-"Dusky"
+#area<-"Doubtful"
+area<-"Dusky"
 space<-"__"
-source('./scripts/connect to MySQL.R', local = TRUE, verbose = F)$value
+#source('./scripts/connect to MySQL.R', local = TRUE, verbose = F)$value
 source('./scripts/life_history_ageclass update.R', local = TRUE, verbose = F)$value
-lifehist<-dbReadTable(con, "life_history_ageclass")
+#lifehist<-dbReadTable(con, "life_history_ageclass")
 
 LASTYEARAGE<-(lifehist[ncol(lifehist)])
 names(LASTYEARAGE)<-c("LASTYEAR_AGE")
