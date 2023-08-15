@@ -7,11 +7,11 @@ NZ_lakes<-sf::read_sf("./shapefiles", layer = "nz-lake-polygons-topo-150k") #htt
 big_lakes<-subset(NZ_lakes, !is.na(name_ascii))
 
 protected_areas<-sf::read_sf("./shapefiles", layer = "protected-areas") #https://data.linz.govt.nz/layer/53564-protected-areas/
-#CRS.latlon<-CRS("+proj=longlat +datum=WGS84 +no_defs")
-#protected_areas<-sp::spTransform(protected_areas, CRS.latlon)
 natpark<-subset(protected_areas, (section == "s.4 - National Park"))
 mpa<-subset(protected_areas, (section == "s.3 - Marine Reserve"))
 
+MA<-sf::read_sf(shapefile_path, layer = "Marine_Protected_Areas_under_the_Marine_Management_Act") # https://catalogue.data.govt.nz/dataset/marine-protected-areas-under-the-marine-management-act/resource/ad9dec70-5163-4d21-ab1c-216d6ff314ac
+FMA<-subset(MA, Name == "Fiordland Marine Area")
 
 #World Heritage Site - https://www.protectedplanet.net/26652
 WHS<-sf::read_sf("./shapefiles", layer = "WDPA_WDOECM_Jul2023_Public_26652_shp-polygons")
@@ -51,7 +51,7 @@ TeWah_points<-data.frame(label = c("Taipaririki-Deep Cove","Motup\u14dhue-Bluff"
                          lat = c(-45.456, -46.597, -45.880),
                          lon = c(167.155, 168.330, 170.501))
 
-TeWah_fill = c("Marine Reserve" = "orange", "Te Wahipounamu" = "forestgreen")
+TeWah_fill = c("Marine Reserve" = "orange", "Te Wahipounamu \n World Heritage Site" = "forestgreen")
 TeWah_color = c("National Park" = "darkgreen")
 
 TeWah<-base+
@@ -59,8 +59,8 @@ TeWah<-base+
   scale_color_manual(values = TeWah_color)+
   geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.2)+
   geom_path(alliso1000, mapping = aes(X,Y,group = L2), color = "steelblue2", alpha = 0.7, size = 0.2)+
-  geom_sf(data = WHS, aes(fill = "Te Wahipounamu"), alpha = 0.5)+
-  geom_sf(data = natpark, aes(color = "National Park"), alpha = 1, fill = NA, linewidth = 0.1)+
+  geom_sf(data = WHS, aes(fill = "Te Wahipounamu \n World Heritage Site"), alpha = 0.5)+
+  geom_sf(data = natpark, aes(color = "National Park"), alpha = 1, fill = NA, linewidth = 0.2)+
   geom_sf(data = mpa, aes(fill = "Marine Reserve"), alpha = 1)+
   geom_sf(data = big_lakes, alpha = 0.6, fill = "blue")+
   geom_point(TeWah_points, mapping = aes(lon, lat), size = 0.5, color = "black", shape = 21)+
@@ -108,10 +108,10 @@ fiord_labels<-data.frame(label = c("Lake\nManapouri","Piopiotahi-Milford Sound",
 fiord_fill = c("Marine Reserve" = "orange")
 
 fiords<-base+
-  geom_polygon(mpa, mapping = aes(X,Y,group = L2, fill = "Marine Reserve"), alpha = 1)+
+  geom_sf(data = mpa, aes(fill = "Marine Reserve"), alpha = 1)+
   geom_path(alliso200, mapping = aes(X,Y,group = L2), color = "steelblue", alpha = 0.7, size = 0.2)+
   geom_path(alliso1000, mapping = aes(X,Y,group = L2), color = "steelblue2", alpha = 0.7, size = 0.2)+
-  geom_polypath(big_lakes, mapping = aes(X,Y,group = L2), alpha = 0.6, fill = "blue")+
+  geom_sf(data = big_lakes, alpha = 0.6, fill = "blue")+
   coord_sf(xlim = c(166.0,168), ylim = c(-46.2,-44.5), crs = 4269)+
   scale_fill_manual(values = fiord_fill)+
   theme(legend.position = c(0.83, 0.12),
