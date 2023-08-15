@@ -1,6 +1,6 @@
 library(odbc);library(dplyr);library(DBI);library(lubridate)
 
-source('./scripts/connect to MySQL.R', local = TRUE)$value
+source('C:/Users/leahm/OneDrive - University of Otago/Documents/git-otago/Fiordland_reporting/scripts/connect to MYSQL.R', local = TRUE, verbose = F)$value
 
 assign_ageclass<-function(x){
   x%>%
