@@ -24,8 +24,8 @@ observeEvent(input$photogo,{
  
 # pharea = "Dusky"
 # phyear = 2023
-# phmonth = '03'
-# phserv = "Network"
+# phmonth = '06'
+# phserv = "Local"
 
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -38,7 +38,8 @@ observeEvent(input$photogo,{
       pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
       } else if (phserv == 'Local'){
       pathway<-input$filepathinput
-      #pathway<-"C:/Users/leahm/Documents/Otago/FBD data management/Fieldwork/"
+      #pathway<-"D:/FBD/Dusky Sound Dolphin Monitoring/"
+      #pathway<-"C:/Users/leahm/OneDrive - University of Otago/Documents/Otago/FBD data management/Fieldwork/"
       ###pathimage<-paste0(pathway,'Other Fiords/',phyear,'/',phyear,'_',phmonth)
       pathimage<-paste0(pathway,phyear,'/',phyear,'_',phmonth)
       }
@@ -58,6 +59,8 @@ observeEvent(input$photogo,{
   sigs$Date<-dmy(sigs$Date)
   
   daterange<-range(sigs$Datetime)
+  
+  print("raw tracks")
   
   if(pharea == "Dusky" & phyear == 2022 & phmonth == '11'){
   
@@ -81,6 +84,8 @@ observeEvent(input$photogo,{
       dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
   }
   
+  print("tracks")
+
   tracks<-as.data.frame(raw_tracks)%>%
     dplyr::select(DATE, TIME, LATITUDE, LONGITUDE, DEVICEID)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
@@ -99,28 +104,69 @@ observeEvent(input$photogo,{
   
   tracks$Datetime<-ymd_hms(tracks$Datetime)
   
+  
+  ### August 23
+  ###
   #find nearest position for time changes ----
+  # consider multiple tablets/devices
   
-  data.table::setDT(sigs)[,  Latitude := data.table::setDT(tracks)[sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
-  data.table::setDT(sigs)[,  Longitude := data.table::setDT(tracks)[sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
+  device<-unique(sigs$DEVICEID)
+  sig_near<-NULL
+  tracksrank<-NULL
+  nrow(sigs)
+  nrow(tracks)
   
-  sigs%>%as.data.frame()
+  for (i in 1:length(device)){
   
-  #filter tracks to only between on/off effort  
+  x = device[i]
+    
+  sig_fil<-sigs%>%
+      filter(DEVICEID == x)
+
+  tracks_fil<-tracks%>%
+      filter(DEVICEID == x)
   
+  print(i)
+  print(x)
+  
+  data.table::setDT(sig_fil)[,  Latitude := data.table::setDT(tracks_fil)[sig_fil, LATITUDE, on = c("Datetime"), roll = "nearest"]]
+  data.table::setDT(sig_fil)[,  Longitude := data.table::setDT(tracks_fil)[sig_fil, LONGITUDE, on = c("Datetime"), roll = "nearest"]]
+  
+  print(sig_fil)
+  print(nrow(sig_near))
+  
+  sig_near<-sig_near%>%
+    bind_rows(sig_fil)
+  
+  print(nrow(sig_near))
+  
+  print(head(tracks_fil))
+  print(nrow(tracks_fil))
   ##get bin list using seq for every 10 seconds
   ##order by DateTime and rank
-  tracksrank<- tracks %>% 
-    mutate(tracksbin = cut(tracks$Datetime, breaks = c(seq(from = tracks$Datetime[1], to = tracks$Datetime[nrow(tracks)], by = 10)))) %>%
+  tracksrank_fil<- tracks_fil %>%
+    arrange(Datetime)%>%
+    ungroup()%>%
+    mutate(tracksbin = cut(Datetime, breaks = c(seq(from = tracks_fil$Datetime[1], to = tracks_fil$Datetime[nrow(tracks_fil)], by = 10)))) %>%
     arrange(Datetime, tracksbin) %>% 
     group_by(tracksbin) %>% 
     mutate(rank=rank(Datetime, ties.method = "first"))%>% 
     filter(rank == 1)%>%
     ungroup()%>%
     dplyr::select(-tracksbin, -rank)
-
-  print(nrow(tracks))
+  
+  
+  tracksrank<-tracksrank%>%
+    bind_rows(tracksrank_fil)
+  
+  print(nrow(tracks_fil))
   print(nrow(tracksrank))
+  
+  }
+  
+  sigs<-sig_near
+  print(head(sigs))
+  #
   
   f_data<-tracksrank%>%
     full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
@@ -157,7 +203,6 @@ observeEvent(input$photogo,{
       filter(rank == 1)%>%
       ungroup()%>%
       dplyr::select(-tracksbin, -rank)
-    
     
     f_data_missing<-missing_tracks%>%
       full_join(missing_sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
@@ -280,6 +325,7 @@ observeEvent(input$photogo,{
     group_by(Date,Event)%>%
     mutate(LAT2 = dplyr::lag(Latitude),
            LON2 = dplyr::lag(Longitude),
+           #is the below really distance in nm?
            dist_km = geosphere::distVincentyEllipsoid(matrix(c(Longitude,Latitude), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
   
   print(f_data_dist%>%filter(dist_km > 0.1)%>%as.data.frame())
