@@ -25,6 +25,7 @@ params:
   wx_comments: NA 
   calf_comments: NA 
   next_comments: NA
+  pharea: NA
 header-includes:
 - \usepackage{float}
 - \usepackage{booktabs}
@@ -88,23 +89,25 @@ Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
 \vspace*{-1mm}
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Recent population abundance estimate: \hfill `r params$pop_est$popsent`
-\vspace*{-5mm}
+\vspace*{-2mm}
+*The above summary values are relative to bottlenose dolphins only*
+\vspace*{-2mm}
 ```{r effort_map, echo=FALSE, out.width='100%', fig.align='center'}
 knitr::include_graphics("./figures/map.png")
 ```
-\vspace*{-8mm}
+\vspace*{-20mm}
 ```{r legend, echo=FALSE, out.width='100%', fig.align='center'}
 knitr::include_graphics("./figures/legend.png")
 ```
-\vspace*{-15mm}
+\vspace*{-20mm}
 ```{r legend_sig, echo=FALSE, out.width='85%', out.height='85%', fig.align='center'}
 knitr::include_graphics("./figures/legend_sig.png")
 ```
-\vspace*{-15mm}
+\vspace*{-20mm}
 Fig. 1. Maps of survey effort (a) and cetacean sightings (b) where initial sighting locations are indicated by the red shapes, and the colored lines represent periods of the survey spent with the animals. 
 \vspace*{5mm}
 \vspace*{-5mm}
-
+\newpage
 ```{r disco, echo=FALSE, fig.align='center', out.width='100%'}
 knitr::include_graphics("./figures/disco_curve.png")
 ```
@@ -125,7 +128,7 @@ knitr::kable(params$age_sex_table%>%dplyr::select(AgeClass, F, M, X), "latex", b
 \vspace*{-5mm}
 ```{r nosig_table, echo=FALSE, warning=FALSE, message=FALSE}
 
-knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals from the ", pharea, " pod that have not been sighted in the last year (since ",params$recent, "), but were sighted in the year before (between ", params$older, " and ", params$recent,"). See Table 1 for age class definitions."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
+knitr::kable(params$unseen_table%>%dplyr::select(LAST_YEAR, AgeClass, F, M, X), "latex", booktabs = T, linesep = "", escape = F, caption = paste0("Age class and sex structure of individuals from the ", params$pharea, " pod that have not been sighted in the last year (since ",params$recent, "), but were sighted in the year before (between ", params$older, " and ", params$recent,"). See Table 1 for age class definitions."), col.names = c("Last year sighted","Age class","Female","Male","Unknown"))%>%
    kable_styling(latex_options = c("HOLD_position"), full_width = F)%>%
    add_header_above(c(" " = 2, "Sex" = 3), escape = F)
 ```
