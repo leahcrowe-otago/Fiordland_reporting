@@ -4,6 +4,7 @@ output: pdf_document
 graphics: yes
 geometry: left=5cm,right=5cm,top=1cm,bottom=3cm
 params:
+  pharea: NA
   tripdate_s: NA 
   tripdate_e: NA
   loc_base: NA 
