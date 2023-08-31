@@ -45,6 +45,7 @@ observeEvent(input$photogo,{
       }
   
   print(pathimage)
+  print(input$surveydata_file)
   
   ##########################
   ## Sightings and tracks ##
@@ -62,16 +63,15 @@ observeEvent(input$photogo,{
   
   print("raw tracks")
   
-  if(pharea == "Dusky" & phyear == 2022 & phmonth == '11'){
+  if(pharea == "Dusky" & phyear == 2023 & phmonth == '06'){
   
-    raw_tracks1<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth," FBD"), quiet = T)
-    raw_tracks2<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth," FBD 2022-11-08"), quiet = T)
+    raw_tracks1<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
+    raw_tracks2<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth,"_Leah phone"), quiet = T)
 
     raw_tracks<-as.data.frame(raw_tracks1)%>%
       mutate(SST = as.character(SST),
              DEPTH = as.numeric(DEPTH))%>%
       bind_rows(as.data.frame(raw_tracks2))
-    
     
   } else {
     
@@ -167,12 +167,12 @@ observeEvent(input$photogo,{
   sigs<-sig_near
   print(head(sigs))
   #
-  
+
   f_data<-tracksrank%>%
-    full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
+    full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time","DEVICEID"))%>%
     mutate(DATE = as.factor(DATE),
            across(where(is.character), ~na_if(., "")))%>%
-    arrange(Datetime)
+    arrange(DEVICEID, Datetime)
 
   # add missing ----
   
@@ -219,10 +219,12 @@ observeEvent(input$photogo,{
   
   #f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
+  print(Event)
+  print(head(f_data))
   
   onoffeffort<-f_data%>%
     filter(grepl('Effort',Effort))%>%
-    distinct(DATE, Datetime)%>%
+    distinct(DATE, Datetime, DEVICEID)%>%
     filter(!is.na(Datetime))%>%
     #ungroup()%>%
     mutate(Event = as.numeric(rep(1:(n()/2),each = 2)))%>%
@@ -232,25 +234,32 @@ observeEvent(input$photogo,{
     dplyr::select(-Datetime)%>%
     distinct()%>%  
     as.data.frame()
-  
+
   f_data<-f_data%>%
-    left_join(Event)
+    left_join(Event, by = c("Datetime", "DATE", "TIME", "LATITUDE", "LONGITUDE", "Event_Type", "Effort",
+"Deployment", "Platform", "Crew", "Beaufort", "Swell", "Glare", "Visibility", "Overall", "Species", "Group_Size", "Calves",
+"Behaviours", "Encounter_Type", "Permit", "SST", "Depth", "Note", "Tawaki", "DEVICEID"))
   
   f_data$Event<-zoo::na.locf(f_data$Event, na.rm = FALSE)
-  nrow(f_data)
-  unique(f_data$Event)
+
+  print(unique(f_data$Event))
+  print(onoffeffort)
   
   f_data<-f_data%>%
-    left_join(onoffeffort, by = c('Event','DATE'))%>% 
+    left_join(onoffeffort, by = c('Event','DATE',"DEVICEID"))%>% 
     filter(Datetime >= min & Datetime <= max)%>%
     as.data.frame()
   nrow(f_data)
   
+  print(f_data%>%
+          filter(grepl("Encounter", Event_Type))%>%
+          arrange(DEVICEID, Datetime))
+  
   sig_num<-f_data%>%
     filter(grepl("Encounter", Event_Type))%>%
-    arrange(Datetime)%>%
+    arrange(DEVICEID, Datetime)%>%
     mutate(signum = rep(1:(n()/2), each = 2))%>%
-    dplyr::select(Datetime, DATE, signum, Species, Effort, Event_Type, Encounter_Type, Permit)%>%
+    dplyr::select(Datetime, DATE, signum, Species, Effort, Event_Type, Encounter_Type, Permit, DEVICEID)%>%
     arrange(desc(Datetime))
   
   sig_num$Species<-zoo::na.locf(sig_num$Species, na.rm = FALSE)
@@ -278,7 +287,7 @@ observeEvent(input$photogo,{
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",".csv"), row.names = F, na = "")
   } else {
-    
+  print("load")
   f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = F)
   head(f_data)
   f_data[f_data == ''] <- NA
@@ -289,6 +298,8 @@ observeEvent(input$photogo,{
     filter(grepl("Encounter", Event_Type))%>%
     arrange(desc(Datetime))%>%
     dplyr::rename("signum" = "Sighting_Number", "DATE" = "Date")
+  
+  print(sig_num%>%as.data.frame())
   
   onoffeffort<-f_data%>%
     filter(grepl('Effort',Effort))%>%
@@ -320,13 +331,42 @@ observeEvent(input$photogo,{
   #2022_07 Dusky mess
   #f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,"_lowercase.csv"), header = T, stringsAsFactors = F)
   
+  if (pharea == "Dusky"){
+    latmin = -45.82
+    latmax = -45.48
+
+  } else if (pharea == "Doubtful"){
+    latmin = -45.5
+    latmax = -45.15
+
+  } else {
+    latmin = min(f_data$Latitude)
+    latmax = max(f_data$Latitude)
+    print(head(f_data))
+
+  }
+  
+  
   f_data_dist<-f_data%>%
+    filter(Latitude >= latmin & Latitude <= latmax)%>%
     arrange(Datetime)%>%
     group_by(Date,Event)%>%
     mutate(LAT2 = dplyr::lag(Latitude),
            LON2 = dplyr::lag(Longitude),
            #is the below really distance in nm?
            dist_km = geosphere::distVincentyEllipsoid(matrix(c(Longitude,Latitude), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
+  
+  if (pharea == "Other"){
+    
+    latmin = -45.82
+    latmax = -45.48
+    
+    f_data_dist<-f_data_dist%>%
+      filter(!(Latitude >= latmin & Latitude <= latmax))
+    
+    f_data<-f_data%>%
+      filter(!(Latitude >= latmin & Latitude <= latmax))
+  }
   
   print(f_data_dist%>%filter(dist_km > 0.1)%>%as.data.frame())
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
@@ -402,7 +442,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   allmerge<-do.call(rbind, PA_merge)
   head(allmerge)
   nrow(allmerge)
-  photo_n<-nrow(allmerge)
+
   allmerge$Date<-ymd(allmerge$Date)
   allmerge<-allmerge%>%
     mutate(ID_Name = case_when(
@@ -484,8 +524,10 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     allmerge_dt$Datetime<-ymd_hms(allmerge_dt$Datetime)
     allmerge_dt$Date<-ymd(allmerge_dt$Date)
     print(nrow(allmerge_dt))
-    photo_n<-nrow(allmerge_dt)
+
     }
+  
+  photo_n<-nrow(allmerge_dt)
   
     ##add group # to match sighting number in final data
     sigminmax<-f_data%>%#filter(!is.na(Sighting_Number))%>%
@@ -533,9 +575,10 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     
     write.csv(allmerge_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
 
-    recent<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(1), "%d %b %Y")
-    older<-format(max(as.Date(allmerge_dt$Date)) - lubridate::years(2), "%d %b %Y")
-    
+    recent<-format(max(sigminmax$Date) - lubridate::years(1), "%d %b %Y")
+    older<-format(max(sigminmax$Date) - lubridate::years(2), "%d %b %Y")
+    print(recent)
+    print(older)
   ##################
   ## life history ##
   ##################
@@ -768,12 +811,12 @@ incProgress(4/5)
   date_color_scale <- scale_colour_manual(name = "Date", values = date_color)
 
 if (map_species == "no"){  
-  species_shape<-c(23,24)
-  names(species_shape)<-c("Bottlenose","Unknown large whale")
+  species_shape<-c(23,21)
+  names(species_shape)<-c("Bottlenose","Other")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
 } else if (map_species == "yes"){
-  species_shape<-c(23,24,21,22,25)
-  names(species_shape)<-c("Bottlenose","Common","Dusky","Shepherd's","Hector's")
+  species_shape<-c(23,24,21,22)
+  names(species_shape)<-c("Bottlenose","Common","Humpback","Other")
   species_shape_scale<-scale_shape_manual(name = "Species", values = species_shape)
 }
   
@@ -826,19 +869,19 @@ sigmap<-sigmap+theme(legend.position = "none")
   print("mapping")
   
   if (pharea == "Dusky"){
-    
+
     coords_dusky<-coord_sf(xlim = c(166.45,167.0), ylim = c(-45.81,-45.49), crs = 4269)
-    
+
     effmap<-effmap+
       coords_dusky+
-      scale_y_continuous(breaks = seq(-45.8,-45.5, by = 0.1)) + 
+      scale_y_continuous(breaks = seq(-45.8,-45.5, by = 0.1)) +
       scale_x_continuous(breaks = seq(166.5, 167.0, by = 0.1))
-      
+
     sigmap<-sigmap+
       coords_dusky+
-      scale_y_continuous(breaks = seq(-45.8,-45.5, by = 0.1)) + 
+      scale_y_continuous(breaks = seq(-45.8,-45.5, by = 0.1)) +
       scale_x_continuous(breaks = seq(166.5, 167.0, by = 0.1))
-    
+
     h = 100
     w1 = 1.15
   } else if (pharea == "Doubtful"){
