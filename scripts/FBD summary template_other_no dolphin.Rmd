@@ -1,0 +1,132 @@
+---
+title: "Fiordland Bottlenose Dolphin Monitoring"
+output: pdf_document
+graphics: yes
+geometry: left=5cm,right=5cm,top=1cm,bottom=3cm
+params:
+  pharea: NA
+  tripdate_s: NA 
+  tripdate_e: NA
+  loc_base: NA 
+  nsurveydays: NA
+  vessel: NA 
+  crew: NA
+  pop_est: NA
+  trip_cap: NA
+  track_dist: NA 
+  sig_days: NA 
+  sig_count: NA 
+  hours_wTt: NA 
+  recent: NA
+  older: NA
+  photo_n: NA
+  age_sex_table: NA
+  unseen_table: NA
+  unseen_names: NA
+  wx_comments: NA 
+  calf_comments: NA 
+  next_comments: NA
+header-includes:
+- \usepackage{float}
+- \usepackage{booktabs}
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+\vspace*{-5mm}
+
+Survey area/base: `r params$loc_base` \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Trip dates: \hfill `r params$tripdate_s` -- `r params$tripdate_e`
+\vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Research team: \vspace*{-7mm}
+
+```{=tex}
+\begin{flushright} 
+`r params$crew`
+\end{flushright}
+\vspace*{-1mm}
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+```
+Vessel: \hfill `r params$vessel` \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Survey days: \hfill `r params$nsurveydays` \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Effort (nautical miles): \hfill `r params$track_dist` \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Group encounter days: \hfill 0 \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Number of sightings: \hfill 0 \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Number of photographs: \hfill 0 \vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Total time (hrs) with dolphins within 100 m (DOC permit): \hfill 0
+\vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Total time (hrs) with dolphins within 100--400 m (DOC permit): \hfill 0
+\vspace*{-1mm}
+
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+Number of dolphins sighted: \hfill 0 
+\vspace*{-1mm}
+
+*The above summary values are relative to bottlenose dolphins only*
+
+```{r effort_map, echo=FALSE, out.width='100%', fig.align='center'}
+knitr::include_graphics("./figures/map.png")
+```
+
+\vspace*{-8mm}
+
+```{r legend, echo=FALSE, out.width='100%', fig.align='center'}
+knitr::include_graphics("./figures/legend.png")
+```
+
+\vspace*{-15mm}
+
+```{r legend_sig, echo=FALSE, out.width='85%', out.height='85%', fig.align='center'}
+knitr::include_graphics("./figures/legend_sig.png")
+```
+
+\vspace*{-15mm}
+
+Fig. 1. Maps of survey effort (a) and cetacean sightings (b) where
+initial sighting locations are indicated by the red shapes, and the
+colored lines represent periods of the survey spent with the animals.
+\vspace*{5mm} \vspace*{-5mm}
+
+
+```{=tex}
+\setlength{\parindent}{0in}
+\setlength{\leftskip}{0in}
+```
+\rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
+
+### Comments:
+
+`r params$wx_comments`
+
+`r params$calf_comments`
+
+`r params$next_comments`
