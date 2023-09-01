@@ -90,16 +90,17 @@ Number of dolphins sighted: \hfill `r nrow(params$trip_cap)`
 \rule[\baselineskip]{\linewidth}{0.4pt}\vspace{-6mm}
 Recent population abundance estimate: \hfill `r params$pop_est$popsent`
 \vspace*{-2mm}
+
 *The above summary values are relative to bottlenose dolphins only*
 \vspace*{-2mm}
 ```{r effort_map, echo=FALSE, out.width='100%', fig.align='center'}
 knitr::include_graphics("./figures/map.png")
 ```
-\vspace*{-20mm}
+\vspace*{-10mm}
 ```{r legend, echo=FALSE, out.width='100%', fig.align='center'}
 knitr::include_graphics("./figures/legend.png")
 ```
-\vspace*{-20mm}
+\vspace*{-15mm}
 ```{r legend_sig, echo=FALSE, out.width='85%', out.height='85%', fig.align='center'}
 knitr::include_graphics("./figures/legend_sig.png")
 ```
