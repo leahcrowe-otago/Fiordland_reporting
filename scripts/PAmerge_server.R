@@ -22,9 +22,9 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
  
-# pharea = "Dusky"
+# pharea = "Doubtful"
 # phyear = 2023
-# phmonth = '06'
+# phmonth = '07'
 # phserv = "Local"
 
   if(pharea == "Other"){
@@ -38,7 +38,7 @@ observeEvent(input$photogo,{
       pathimage<-paste0(pathway,phareafile,phyear,'/',phyear,'_',phmonth)
       } else if (phserv == 'Local'){
       pathway<-input$filepathinput
-      #pathway<-"D:/FBD/Dusky Sound Dolphin Monitoring/"
+      #pathway<-"D:/FBD/Doubtful Sound Dolphin Monitoring/"
       #pathway<-"C:/Users/leahm/OneDrive - University of Otago/Documents/Otago/FBD data management/Fieldwork/"
       ###pathimage<-paste0(pathway,'Other Fiords/',phyear,'/',phyear,'_',phmonth)
       pathimage<-paste0(pathway,phyear,'/',phyear,'_',phmonth)
@@ -124,7 +124,8 @@ observeEvent(input$photogo,{
       filter(DEVICEID == x)
 
   tracks_fil<-tracks%>%
-      filter(DEVICEID == x)
+      filter(DEVICEID == x)%>%
+      filter(!is.na(Datetime))
   
   print(i)
   print(x)
@@ -478,13 +479,13 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   
 #allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
   nrow(allmerge)
-  nrow(allphotod_df)
+  print(nrow(allphotod_df))
   files_for_exif<-allphotod_df%>%
     mutate(filename = stringr::str_sub(filename, end = -5))%>%
     right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
     #distinct(fullfilename)%>%
     filter(!is.na(fullfilename))
-  nrow(files_for_exif)
+  print(nrow(files_for_exif))
   incProgress(1/5)
   print("getting exif data")
   #get exif data
@@ -527,7 +528,8 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
 
     }
   
-  photo_n<-nrow(allmerge_dt)
+  #this is the number of unique images after culling to allow for a count when the PA is loaded
+  photo_n<-nrow(allmerge_dt%>%distinct(Filename))
   
     ##add group # to match sighting number in final data
     sigminmax<-f_data%>%#filter(!is.na(Sighting_Number))%>%
