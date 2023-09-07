@@ -1,13 +1,15 @@
 library(odbc);library(dplyr);library(DBI);library(lubridate);library(ggplot2);library(viridis)
 
-reporting_year = 2021
+reporting_year = 2022
 min_year = 2009
 
-source('~/Documents/git_otago/Fiordland_reporting/scripts/connect to MySQL.R', local = TRUE)$value
+source('~/git-otago/Fiordland_reporting/scripts/connect to MySQL.R', local = TRUE)$value
 photo_analysis_calfyear_sql<-dbReadTable(con, "photo_analysis_calfyear")
-#source('~/Documents/git_otago/Fiordland_reporting/scripts/life_history_ageclass update.R', local = TRUE)$value
-lifehist<-dbReadTable(con, "life_history_ageclass")
 survey_data<-dbReadTable(con, "survey_data_calfyear")
+trip_summary<-dbReadTable(con, "trip_summary")
+source('~/git-otago/Fiordland_reporting/scripts/life_history_ageclass update.R', local = TRUE)$value
+#lifehist<-dbReadTable(con, "life_history")
+#survey_data<-dbReadTable(con, "survey_data_calfyear")
 
 photo_analysis_calfyear_sql$CALFYEAR<-as.numeric(photo_analysis_calfyear_sql$CALFYEAR)
 photo_analysis_calfyear_sql$YEAR<-as.numeric(photo_analysis_calfyear_sql$YEAR)
@@ -15,7 +17,8 @@ photo_analysis_calfyear_sql$YEAR<-as.numeric(photo_analysis_calfyear_sql$YEAR)
 #age is determined by calfyear
 lifehist_long<-lifehist%>%
   tidyr::pivot_longer(cols = c(13:ncol(lifehist)), names_to = "YEAR", values_to = "AGECLASS")%>%
-  mutate(YEAR = as.numeric(substr(YEAR, 2, 5)))
+  mutate(YEAR = as.numeric(YEAR))
+  # mutate(YEAR = as.numeric(substr(YEAR, 2, 5)))
 
 myCol<-viridis(5, option = "D")
 ageclass_fill = c("D" = myCol[5],"C" = myCol[4], "J" = myCol[3], "S-A" = myCol[2],"A" = myCol[1], "U" = "grey")
@@ -30,7 +33,7 @@ for (i in scenario){
 #currently defining season by the month of trip start date
 
 pa_lh<-photo_analysis_calfyear_sql%>%
-  left_join(lifehist_long, by = c("ID_NAME" = "NAME", "CALFYEAR" = "YEAR"))
+  dplyr::left_join(lifehist_long, by = c("ID_NAME" = "NAME", "CALFYEAR" = "YEAR"))
 
 yearcap<-pa_lh%>%
   mutate(YEAR = case_when(
@@ -189,12 +192,12 @@ if (exists("LPC_df_ls") == FALSE){
 
 }
 
-dusky_temp<-read.csv("./data/DUSKY_NHAT_N.csv", header = T, stringsAsFactors = F)
-
-LPC_df_ls<-LPC_df_ls%>%
-  bind_rows(dusky_temp)%>%
-  filter(!is.na(n))%>%
-  distinct()
+# dusky_temp<-read.csv("./data/DUSKY_NHAT_N.csv", header = T, stringsAsFactors = F)
+# 
+# LPC_df_ls<-LPC_df_ls%>%
+#   bind_rows(dusky_temp)%>%
+#   filter(!is.na(n))%>%
+#   distinct()
 
 #LPC_df_ls%>%filter(POD == "DUSKY" & YEAR > 2009 & subset == "Calendar")
 
@@ -292,6 +295,7 @@ calves<-lifehist%>%
   replace(is.na(.), 0)
 
 LPC_calf_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
+  #ggplot()+
   #geom_line(aes(x = YEAR, y = Nhat, color = POD))+
   #geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl, color = POD), width = 0.4)+
   #geom_line(aes(x = YEAR, y = n, color = POD), linetype = "dashed")+
@@ -306,20 +310,20 @@ LPC_calf_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
   xlab("Year")+
   #facet_wrap(~POD, scales = "free")+
   theme_bw()+
-  theme(legend.position = "bottom")+
-  scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
+  theme(legend.position = "bottom")#+
+  #scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
 
 ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 150, height = 80, units = 'mm')
 
 shapes <- c("n, census" = 24, "N, estimate" = 16)
 linetype<-c("n, census" = "dashed", "N, estimate" = "solid")
 
-LPC_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
+LPC_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar")%>%filter(POD != "NORTHERN"))+
   geom_line(aes(x = YEAR, y = n, linetype = "n, census"))+
-  geom_line(aes(x = YEAR, y = Nhat, linetype = "N, estimate"))+
+  #geom_line(aes(x = YEAR, y = Nhat, linetype = "N, estimate"))+
   geom_point(aes(x = YEAR, y = n, shape = "n, census"))+
-  geom_point(aes(x = YEAR, y = Nhat, shape = "N, estimate"))+
-  geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl), width = 0.4)+
+  #geom_point(aes(x = YEAR, y = Nhat, shape = "N, estimate"))+
+  #geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl), width = 0.4)+
   labs(shape = "", linetype = "")+
   #theme(legend.direction = "vertical")+
   facet_wrap(~POD, scales = "free", ncol = 1)+
@@ -364,6 +368,7 @@ ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
 datalog<-read.csv('./data/Data_Log.csv', header = T, stringsAsFactors = T)
 
 datalog<-datalog%>%
+  filter(Vessel != "PEMBROKE")%>%
   dplyr::select(Fiord, Year, Season, Folder, Start_date, End_date)%>%
   tidyr::pivot_longer(cols = ends_with("date"), names_to = "start_end", values_to = "Date")%>%
   mutate(Date = dmy(Date),
@@ -380,9 +385,9 @@ unique(fiords$Fiord)
 data<-fiords
 #data<-datalog
 
-timeline<-ggplot(data%>%filter(Year == reporting_year)%>%filter(Fiord == "DUSKY" | Fiord == "DOUBTFUL"))+
-  geom_point(aes(x = Ordinal, y = Fiord, group = Folder, color = Season))+
-  geom_path(aes(x = Ordinal, y = Fiord, group = Folder, color = Season), size = 2)+
+timeline<-ggplot(data%>%filter(Year == reporting_year)%>%filter(Fiord == "DUSKY" | Fiord == "DOUBTFUL")%>%mutate(tripid = paste0(Fiord,Folder)))+
+  geom_point(aes(x = Ordinal, y = Fiord, group = tripid, color = Season))+
+  geom_path(aes(x = Ordinal, y = Fiord, group = tripid, color = Season), linewidth = 2)+
   #facet_wrap(~Fiord, ncol = 2)+
   scale_x_continuous(breaks = c(1,32,60,91,121,152,182,213,244,274,305,335,366), 
                      labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",""), limits = c(1,366))+
@@ -398,14 +403,18 @@ ggsave('./figures/timeline.png', dpi = 320, width = 160, height = 60, units = 'm
 
 ###
 #tables
-trip_summary<-dbReadTable(con, "trip_summary")
+trip_summary
 
-effort_days<-trip_summary%>%
+effort_days<-survey_data%>%
   filter(year(DATE) == reporting_year)%>%
+  distinct(DATE)%>%
+  left_join(trip_summary, by = "DATE")%>%
   group_by(SURVEY_AREA, TRIP)%>%
   mutate(`Effort (days)` = n(),
-         `Date range` = paste0(format(min(DATE),"%d %b"),"–",format(max(DATE),"%d %b")))%>%
-  distinct(SURVEY_AREA, TRIP, `Date range`,`Effort (days)`)
+         `Date range` = paste0(format(min(ymd(DATE)),"%d %b"),"–",format(max(ymd(DATE)),"%d %b")))%>%
+  distinct(SURVEY_AREA, TRIP, `Date range`,`Effort (days)`)%>%
+  filter(!is.na(SURVEY_AREA))%>%
+  arrange(SURVEY_AREA, TRIP)
 
 sig_days<-photo_analysis_calfyear_sql%>%
   filter(YEAR == reporting_year)%>%
@@ -461,3 +470,4 @@ ind_list<-photo_analysis_calfyear_sql%>%
   arrange(SURVEY_AREA, ID_NAME)
 
 save(LPC_df_ls, LPC_calf_plot, calves, last_seen, lastseen_plot, timeline, effort_table, file = paste0("LPC_",reporting_year,".Rdata"))
+
