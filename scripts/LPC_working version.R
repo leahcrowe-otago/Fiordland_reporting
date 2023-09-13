@@ -192,12 +192,13 @@ if (exists("LPC_df_ls") == FALSE){
 
 }
 
-# dusky_temp<-read.csv("./data/DUSKY_NHAT_N.csv", header = T, stringsAsFactors = F)
-# 
-# LPC_df_ls<-LPC_df_ls%>%
-#   bind_rows(dusky_temp)%>%
-#   filter(!is.na(n))%>%
-#   distinct()
+dusky_temp<-read.csv("./data/DUSKY_NHAT_N.csv", header = T, stringsAsFactors = F)
+dusky_temp$season<-as.character(dusky_temp$season)
+
+LPC_df_ls<-LPC_df_ls%>%
+  bind_rows(dusky_temp)%>%
+  filter(!is.na(n))%>%
+  distinct()
 
 #LPC_df_ls%>%filter(POD == "DUSKY" & YEAR > 2009 & subset == "Calendar")
 
@@ -318,15 +319,10 @@ ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 150, height = 80, units
 shapes <- c("n, census" = 24, "N, estimate" = 16)
 linetype<-c("n, census" = "dashed", "N, estimate" = "solid")
 
-LPC_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar")%>%filter(POD != "NORTHERN"))+
-  geom_line(aes(x = YEAR, y = n, linetype = "n, census"))+
-  #geom_line(aes(x = YEAR, y = Nhat, linetype = "N, estimate"))+
-  geom_point(aes(x = YEAR, y = n, shape = "n, census"))+
-  #geom_point(aes(x = YEAR, y = Nhat, shape = "N, estimate"))+
-  #geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl), width = 0.4)+
+census_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar")%>%filter(POD != "NORTHERN"))+
+  geom_line(aes(x = YEAR, y = n, color = POD), linetype = "dashed")+
+  geom_point(aes(x = YEAR, y = n, color = POD))+
   labs(shape = "", linetype = "")+
-  #theme(legend.direction = "vertical")+
-  facet_wrap(~POD, scales = "free", ncol = 1)+
   ylab("Number of individuals")+
   xlab("Year")+
   theme_bw()+
@@ -337,7 +333,7 @@ LPC_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar")%>%filter(POD != "NORTH
   scale_color_brewer(palette = "Dark2")+
   scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
   
-ggsave('./figures/LPC_plot.png', dpi = 320, width = 120, height = 200, units = 'mm')
+ggsave('./figures/census_plot.png', dpi = 320, width = 120, height = 100, units = 'mm')
 
 library(scales)
 lastseen_plot_calf<-lastseen_plot+
