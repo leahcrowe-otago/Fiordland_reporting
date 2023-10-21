@@ -4,7 +4,7 @@ max_year = 2023
 min_year = 2009
 
 source('~/git-otago/Fiordland_reporting/scripts/connect to MySQL.R', local = TRUE)$value
-photo_analysis_calfyear_sql<-dbReadTable(con, "photo_analysis_calfyear")
+photo_analysis_calfyear_sql<-dbReadTable(con, "photo_analysis_calfyear")%>%filter(ID_NAME != "CULL")
 survey_data<-dbReadTable(con, "survey_data_calfyear")
 trip_summary<-dbReadTable(con, "trip_summary")
 source('~/git-otago/Fiordland_reporting/scripts/life_history_ageclass update.R', local = TRUE)$value
@@ -17,7 +17,9 @@ photo_analysis_calfyear_sql$CALFYEAR<-as.numeric(photo_analysis_calfyear_sql$CAL
 #age is determined by calfyear
 lifehist_long<-lifehist%>%
   tidyr::pivot_longer(cols = c(13:ncol(lifehist)), names_to = "YEAR", values_to = "AGECLASS")%>%
-  mutate(YEAR = as.numeric(YEAR))
+  mutate(YEAR = as.numeric(YEAR))%>%
+  filter(YEAR > 2008 & POD != "NORTHERN")%>%
+  filter(!(YEAR < 2016 & POD == "DUSKY"))
   # mutate(YEAR = as.numeric(substr(YEAR, 2, 5)))
 
 myCol<-viridis(5, option = "D")
@@ -25,15 +27,11 @@ ageclass_fill = c("D" = myCol[5],"C" = myCol[4], "J" = myCol[3], "S-A" = myCol[2
 
 ###############
 
-
-pa_lh<-photo_analysis_calfyear_sql%>%
-  filter(ID_NAME != "CULL")%>%
-  dplyr::left_join(lifehist_long, by = c("ID_NAME" = "NAME", "CALFYEAR" = "YEAR"))
-
-yearcap<-pa_lh%>%
-  #mutate(YEAR = CALFYEAR)%>%
-  filter(YEAR > 2005)%>%
-  group_by(YEAR, POD)%>%
+yearcap<-photo_analysis_calfyear_sql%>%
+  left_join(lifehist, by = c("ID_NAME" = "NAME"))%>%
+  filter(CALFYEAR > 2008 & POD != "NORTHERN")%>%
+  filter(!(CALFYEAR < 2016 & POD == "DUSKY"))%>%
+  group_by(CALFYEAR, POD)%>%
   distinct(TRIP, ID_NAME)%>%
   mutate(month_start = as.numeric(substr(TRIP,6,7)))%>%
   mutate(season = case_when(
@@ -48,45 +46,24 @@ yearcap%>%filter(is.na(POD))
 #yearcap%>%filter(TRIP == '2019_07')
 
 yeartriptally<-yearcap%>%
-  group_by(POD, YEAR, TRIP)%>%
+  group_by(POD, CALFYEAR, TRIP)%>%
   tally()
 
-yeartriptally%>%filter(YEAR == 2015)
+yeartriptally%>%filter(CALFYEAR == 2015)
 
 yeartally<-yearcap%>%
   distinct(POD, ID_NAME)%>%
   tally()
 
-yearcap%>%
-  distinct(POD, ID_NAME)%>%
-  filter(YEAR == 2019)%>%arrange(ID_NAME)%>%
-  as.data.frame()
+yeartally$CALFYEAR<-as.numeric(yeartally$CALFYEAR)
 
-yeartally$YEAR<-as.numeric(yeartally$YEAR)
+## last seen ----
+#need this so animals aren't represented twice if there periods when we didn't know their ageclass (i.e. unknown birth years)
+last_seen_ind<-lifehist_long%>%
+  filter(LAST_YEAR == YEAR)%>%
+  filter(LAST_YEAR >= min_year)
 
-
-dusky_temp<-read.csv("./data/DUSKY_NHAT_N.csv", header = T, stringsAsFactors = F)
-dusky_temp$season<-as.character(dusky_temp$season)
-
-census<-yeartally%>%
-  bind_rows(dusky_temp)%>%
-  filter(!is.na(n))%>%
-  distinct()%>%
-  dplyr::select(YEAR, POD, n)
-
-# last_seen_ind<-lifehist_long%>%
-#   mutate(LAST_CALFYEAR = case_when(
-#     month(LAST_DATE) >= 9 ~ as.numeric(LAST_YEAR) + 1,
-#     TRUE ~ as.numeric(LAST_YEAR)))
-
-lifehist_long%>%filter(last_year == max_year-1)%>%
-  mutate(age = reporting_year-as.numeric(BIRTH_YEAR),
-         at_least_age = reporting_year-as.numeric(FIRST_YEAR))%>%
-  dplyr::select(POD, NAME, SEX, age, at_least_age, FIRST_YEAR, LAST_DATE, AGECLASS, LAST_CALFYEAR)
-
-last_seen<-lifehist_long%>%
-  filter(LAST_YEAR > 2008 & POD != "NORTHERN")%>%
-  filter(!(LAST_YEAR < 2019 & POD == "DUSKY"))%>%
+last_seen<-last_seen_ind%>%
   distinct(POD, LAST_YEAR, NAME, AGECLASS)%>%
   group_by(POD, LAST_YEAR, AGECLASS)%>%
   tally()
@@ -111,14 +88,14 @@ year_name<-photo_analysis_calfyear_sql%>%
   mutate(minyear = min(YEAR), maxyear = max(YEAR))
 
 year_perdolphin<-lifehist_long%>%
-  right_join(year_name, by = c("NAME" = "ID_NAME", "YEAR" = "YEAR"))%>%
+  left_join(year_name, by = c("NAME" = "ID_NAME", "YEAR" = "YEAR"))%>%
   filter(!is.na(minyear))%>%
-  filter(YEAR == reporting_year)%>%
+  filter(YEAR == max_year)%>%
   #filter(NAME == "NANCY")%>%
   mutate(AGECLASS = case_when(
-   AGECLASS == "NA" & as.numeric(FIRST_YEAR) == reporting_year ~ "C",
+   AGECLASS == "NA" & as.numeric(FIRST_YEAR) == max_year ~ "C",
     TRUE ~ AGECLASS))
-
+#nrow(year_perdolphin)
 year_perdolphin$AGECLASS<-factor(year_perdolphin$AGECLASS, levels = c("U","A","S-A","J","C","D"))
 
 year_perdolphin%>%filter(AGECLASS == "NA")%>%arrange(NAME)
@@ -166,15 +143,10 @@ calves<-lifehist%>%
   tidyr::complete(POD, BIRTH_YEAR)%>%
   replace(is.na(.), 0)
 
-LPC_calf_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
-  #ggplot()+
-  #geom_line(aes(x = YEAR, y = Nhat, color = POD))+
-  #geom_errorbar(aes(x = YEAR, ymin = lcl, ymax = ucl, color = POD), width = 0.4)+
-  #geom_line(aes(x = YEAR, y = n, color = POD), linetype = "dashed")+
-  #geom_point(aes(x = YEAR, y = n, color = POD), shape = 24)+
+calf_plot<-ggplot(calves)+
   scale_color_brewer(palette = 'Dark2') +
-  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
-  geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= max_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD), size = 4, alpha = 0.5)+
+  geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= max_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD, linetype = POD))+
   #new_scale_color() +
   #geom_point(aes(x = YEAR, y = Nhat, color = season))+
   #scale_color_manual(values = c("black","purple")) +
@@ -185,44 +157,44 @@ LPC_calf_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
   theme(legend.position = "bottom")#+
   #scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
 
-ggsave('./figures/LPC_calf_plot.png', dpi = 320, width = 150, height = 80, units = 'mm')
+ggsave('./figures/calf_plot.png', dpi = 320, width = 150, height = 80, units = 'mm')
 
-shapes <- c("n, census" = 24, "N, estimate" = 16)
-linetype<-c("n, census" = "dashed", "N, estimate" = "solid")
+#####
 
-census_plot<-ggplot(LPC_df_ls%>%filter(subset == "Calendar")%>%filter(POD != "NORTHERN"))+
-  geom_line(aes(x = YEAR, y = n, color = POD), linetype = "dashed")+
-  geom_point(aes(x = YEAR, y = n, color = POD))+
+census_plot<-ggplot(yeartally)+
+  geom_line(aes(x = CALFYEAR, y = n, color = POD), linetype = "dashed")+
+  geom_point(aes(x = CALFYEAR, y = n, color = POD))+
   labs(shape = "", linetype = "")+
   ylab("Number of individuals")+
   xlab("Year")+
   theme_bw()+
   theme(legend.position = "bottom",
         legend.title = element_text(""))+
-  scale_shape_manual(values = shapes)+
-  scale_linetype_manual(values = linetype)+
+  #scale_shape_manual(values = shapes)+
+  #scale_linetype_manual(values = linetype)+
   scale_color_brewer(palette = "Dark2")+
-  scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
+  scale_x_continuous(breaks = seq(min(yeartally$CALFYEAR),max(yeartally$CALFYEAR),3), minor_breaks = seq(min(yeartally$CALFYEAR),max(yeartally$CALFYEAR),1))
   
 ggsave('./figures/census_plot.png', dpi = 320, width = 120, height = 100, units = 'mm')
 
-library(scales)
-lastseen_plot_calf<-lastseen_plot+
-  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) < reporting_year)%>%filter(POD == "DOUBTFUL"), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n), fill = "black", shape = 22)+
-  scale_y_continuous(breaks= pretty_breaks())
-
-ggsave('./figures/lastseen_plot_calf.png', dpi = 320, width = 125, height = 100, units = 'mm')
-
-###########
-ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
-  scale_color_brewer(palette = 'Dark2') +
-  geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
-  geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
-  ylab("Number of individuals")+
-  xlab("Year")+
-  theme_bw()+
-  theme(legend.position = "bottom")+
-  scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
+####
+# library(scales)
+# lastseen_plot_calf<-lastseen_plot+
+#   geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) < reporting_year)%>%filter(POD == "DOUBTFUL"), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n), fill = "black", shape = 22)+
+#   scale_y_continuous(breaks= pretty_breaks())
+# 
+# ggsave('./figures/lastseen_plot_calf.png', dpi = 320, width = 125, height = 100, units = 'mm')
+# 
+# ###########
+# ggplot(LPC_df_ls%>%filter(subset == "Calendar"))+
+#   scale_color_brewer(palette = 'Dark2') +
+#   geom_point(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+#   geom_line(data = calves%>%filter(as.numeric(BIRTH_YEAR) <= reporting_year), mapping = aes(x = as.numeric(BIRTH_YEAR), y = n, color = POD))+
+#   ylab("Number of individuals")+
+#   xlab("Year")+
+#   theme_bw()+
+#   theme(legend.position = "bottom")+
+#   scale_x_continuous(breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),3), minor_breaks = seq(min(LPC_df_ls$YEAR),max(LPC_df_ls$YEAR),1))
 
 
 ###
@@ -252,9 +224,9 @@ unique(fiords$Fiord)
 data<-fiords
 #data<-datalog
 
-timeline<-ggplot(data%>%filter(Year == reporting_year)%>%filter(Fiord == "DUSKY" | Fiord == "DOUBTFUL")%>%mutate(tripid = paste0(Fiord,Folder)))+
-  geom_point(aes(x = Ordinal, y = Fiord, group = tripid, color = Season))+
-  geom_path(aes(x = Ordinal, y = Fiord, group = tripid, color = Season), linewidth = 2)+
+timeline<-ggplot(data%>%filter(Year >=2009)%>%filter(Fiord == "DUSKY" | Fiord == "DOUBTFUL")%>%mutate(tripid = paste0(Fiord,Folder)))+
+  geom_point(aes(x = Ordinal, y = as.factor(Year), group = tripid, color = Season))+
+  geom_path(aes(x = Ordinal, y = as.factor(Year), group = tripid, color = Season), linewidth = 2)+
   #facet_wrap(~Fiord, ncol = 2)+
   scale_x_continuous(breaks = c(1,32,60,91,121,152,182,213,244,274,305,335,366), 
                      labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",""), limits = c(1,366))+
@@ -264,7 +236,8 @@ timeline<-ggplot(data%>%filter(Year == reporting_year)%>%filter(Fiord == "DUSKY"
   ylab("")+
   theme(panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank(),
-        legend.position = "bottom")
+        legend.position = "bottom")+
+  facet_wrap(~Fiord)
 
 ggsave('./figures/timeline.png', dpi = 320, width = 160, height = 60, units = 'mm')
 
@@ -273,7 +246,7 @@ ggsave('./figures/timeline.png', dpi = 320, width = 160, height = 60, units = 'm
 trip_summary
 
 effort_days<-survey_data%>%
-  filter(year(DATE) == reporting_year)%>%
+  filter(year(DATE) == max_year)%>%
   distinct(DATE)%>%
   left_join(trip_summary, by = "DATE")%>%
   group_by(SURVEY_AREA, TRIP)%>%
@@ -284,14 +257,14 @@ effort_days<-survey_data%>%
   arrange(SURVEY_AREA, TRIP)
 
 sig_days<-photo_analysis_calfyear_sql%>%
-  filter(YEAR == reporting_year)%>%
+  filter(YEAR == max_year)%>%
   distinct(SURVEY_AREA, TRIP, DATE)%>%
   group_by(SURVEY_AREA, TRIP)%>%
   tally()%>%
   dplyr::rename(`Sighting (days)` = n)
 
 n_season<-photo_analysis_calfyear_sql%>%
-  filter(YEAR == reporting_year)%>%
+  filter(YEAR == max_year)%>%
   distinct(SURVEY_AREA, TRIP, ID_NAME)%>%
   group_by(SURVEY_AREA, TRIP)%>%
   tally()%>%
@@ -319,12 +292,12 @@ print(knitr::kable(effort_table, format = "latex")%>%
         kable_styling()%>%
         group_rows("Patea-Doubtful", 1, 3) %>%
         group_rows("Tamatea-Dusky", 4, 6))
-
-LPC_table<-LPC_df_ls%>%
-  filter(n1 != "NA" & subset == "Calendar")%>%
-  mutate(Pod = stringr::str_to_title(POD))%>%
-  mutate(`95% CI` = paste0(lcl,"–",ucl))%>%
-  dplyr::select(YEAR,n1, n2, m2, Nhat, `95% CI`, n)
+# 
+# LPC_table<-LPC_df_ls%>%
+#   filter(n1 != "NA" & subset == "Calendar")%>%
+#   mutate(Pod = stringr::str_to_title(POD))%>%
+#   mutate(`95% CI` = paste0(lcl,"–",ucl))%>%
+#   dplyr::select(YEAR,n1, n2, m2, Nhat, `95% CI`, n)
   
 print(knitr::kable(LPC_table, format = "latex")%>%
         kable_styling()%>%
