@@ -1,5 +1,8 @@
 library(dplyr); library(exifr); library(stringr); library(lubridate)
 
+#attempt to fix premature eof error
+#configure_exiftool(command = character(0), install_url = TRUE)
+
 #survey_area<-'Doubtful'
 survey_area<-'Dusky'
 #survey_area<-'Dagg Sound'
@@ -9,16 +12,21 @@ if (survey_area == 'Doubtful' | survey_area == 'Dusky'){
   fiord_path<-paste0('Other Fiords/',survey_area,'/')
 }
 path<-paste0("//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/",fiord_path)
-year<-2013
-month<-'04'
+year<-2015
+list.files(paste0(path,year,"/"))
+month<-'03'
 
 fullpath<-paste0(path,year,"/",year,"_",month,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
+#folder.list<-folder.list[7:8]
 filenames<-sapply(folder.list, function (x) list.files(paste0(fullpath, x), pattern = c("*.jpg$|*.JPG$|*.NEF"), full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
 length(filenames_unlist)
 
+print(Sys.time())
 metadata<-exifr::read_exif(filenames_unlist, tags = c("filename", "DateTimeOriginal"))
+print(Sys.time())
+nrow(metadata)
 ############
 ##this finds ands
 and<-metadata%>%
@@ -54,3 +62,18 @@ photoperind<-metadata%>%
   arrange(DateTime, Filename)
 
 write.csv(photoperind, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'.csv'), row.names = F)
+
+
+#############
+
+csv_list<-list.files("./data", pattern = "Ind_per_photo_2016_12_2023-10-*", full.names = T, recursive = T)
+
+csv_data<-lapply(csv_list, function(x)
+  read.csv(x)
+)
+
+nrow(csv_data[[2]])
+new_csv<-bind_rows(csv_data)
+nrow(new_csv)
+unique(new_csv$Date)
+write.csv(new_csv, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'_merge.csv'), row.names = F)
