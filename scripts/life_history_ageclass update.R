@@ -77,6 +77,7 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
   lifehist
 }
 
+lifehist%>%filter(NAME == "NANCY")
 
 TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",FIRST_CALF="varchar(4)",
              BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", FIRST_DATE="varchar(10)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", 

@@ -22,10 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
  
-# pharea = "Doubtful"
-# phyear = 2023
-# phmonth = '07'
-# phserv = "Local"
+pharea = "Nancy"
+phyear = 2023
+phmonth = '11'
+phserv = "Network"
 
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -459,7 +459,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   head(filenames_unlist)
   allphotod_df<-data.frame(fullfilename = as.vector(filenames_unlist),
              filename = basename(filenames_unlist),
-             date = ymd(str_extract(filenames_unlist,'\\b\\d{8}\\b')))
+             date = ymd(stringr::str_extract(filenames_unlist,'\\b\\d{8}\\b')))
   head(allphotod_df)
   nrow(allphotod_df)
   
@@ -575,6 +575,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     
     print(nrow(allmerge_group))
     
+    # allmerge_group<-allmerge_dt%>%
+    #   mutate(GGroup = 1)
+    # 
     write.csv(allmerge_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
 
     recent<-format(max(sigminmax$Date) - lubridate::years(1), "%d %b %Y")
