@@ -63,7 +63,7 @@ names(lifehist)[length(names(lifehist))]<-phyear_lh
 
 ##after 1990
 
-for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
+for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):2024){
   phyear_lh = i
   print(phyear_lh)
   print(year(Sys.Date()))
