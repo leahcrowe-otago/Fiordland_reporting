@@ -65,6 +65,7 @@ write.csv(photoperind, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Dat
 
 
 #############
+# merge exif data done in segments for a trip #####
 
 csv_list<-list.files("./data", pattern = "Ind_per_photo_2016_12_2023-10-*", full.names = T, recursive = T)
 
@@ -77,3 +78,29 @@ new_csv<-bind_rows(csv_data)
 nrow(new_csv)
 unique(new_csv$Date)
 write.csv(new_csv, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'_merge.csv'), row.names = F)
+
+# del duped photos from network ####
+# cleanup
+
+#read in slightly processed csv, before checking of multiple animals in photos, etc, but deleted the photo file names from the "Name" column
+csv_list<-list.files("./data", pattern = "Ind_per_photo_2016_04_2023-10-*", full.names = T, recursive = T)
+csv_data<-read.csv(csv_list[1])
+head(csv_data)
+nrow(csv_data)
+
+dupe_photos_del<-csv_data%>%
+  group_by(DateTime, Filename)%>%
+  mutate(n = n())%>%
+  filter(n > 1 & Name == "")
+
+unique_records<-csv_data%>%
+  group_by(DateTime, Filename)%>%
+  mutate(n = n())%>%
+  filter(n == 1 | Name != "")
+nrow(unique_records)
+
+write.csv(unique_records, paste0('./data/Ind_per_photo_2016_04_2023-10-17_nodupes.csv'), row.names = F)
+
+4484+696
+
+#lapply(dupe_photos_del$SourceFile[7:695], function(x) file.remove(x))
