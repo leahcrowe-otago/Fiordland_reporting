@@ -35,6 +35,7 @@ phyear_lh = min(lifehist_sql$FIRST_YEAR)
 print(phyear_lh)
 
 mom_first_year<-lifehist_sql%>%filter(MOM != "")%>%group_by(MOM)%>%dplyr::summarise(FIRST_CALF = min(BIRTH_YEAR))
+lifehist_sql%>%filter(MOM == "ARROW")%>%group_by(MOM)%>%dplyr::summarise(FIRST_CALF = min(BIRTH_YEAR))
 lifehist_sql<-lifehist_sql%>%left_join(mom_first_year, by = c("NAME" = "MOM"))
 lifehist<-assign_ageclass(lifehist_sql)
 lifehist$DEATH_YEAR[lifehist$DEATH_YEAR==""] <- NA
@@ -57,13 +58,29 @@ lifehist<-lifehist%>%
     NAME == "D-20110328" ~ "2011-03-28",
     TRUE ~ LAST_DATE
   ))%>%
+  left_join(inutero, by = "NAME")%>%
   dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, FIRST_DATE, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
+
+inutero<-lifehist%>%
+  left_join(pa_cy, by = c("MOM" = "ID_NAME"), relationship = "many-to-many")%>%
+  filter(DATE < FIRST_DATE)%>%
+  group_by(NAME)%>%
+  dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, FIRST_DATE, DEATH_YEAR, LAST_YEAR, LAST_DATE, DATE)%>%
+  distinct()%>%
+  filter(DATE == max(DATE))%>%
+  mutate(INUTERO = DATE)%>%
+  dplyr::select(NAME, INUTERO)%>%
+  as.data.frame()
+
+lifehist<-lifehist%>%
+  left_join(inutero, by = "NAME")%>%
+  dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, INUTERO, FIRST_YEAR, FIRST_DATE, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
 
 names(lifehist)[length(names(lifehist))]<-phyear_lh
 
 ##after 1990
 
-for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):2024){
+for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
   phyear_lh = i
   print(phyear_lh)
   print(year(Sys.Date()))
@@ -78,6 +95,7 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):2024){
 }
 
 lifehist%>%filter(NAME == "NANCY")
+  
 
 TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",FIRST_CALF="varchar(4)",
              BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", FIRST_DATE="varchar(10)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", 
@@ -87,4 +105,16 @@ TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="var
 
 ##once last_year is integrated, need to make some changes to the above so age class is only populated between birth/first and last  
 
+avg_primo_age_df<-lifehist%>%
+  filter(!is.na(FIRST_CALF))%>%
+  mutate(primo_age = as.numeric(FIRST_CALF)-as.numeric(BIRTH_YEAR))%>%
+  filter(!is.na(primo_age))%>%
+  mutate(avg_primo_age = mean(primo_age))
+
+avg_primo_age<-unique(avg_primo_age_df$avg_primo_age)
+avg_primo_age
+
 dbDisconnect(con)
+
+
+  

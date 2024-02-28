@@ -22,7 +22,7 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
  
-pharea = "Nancy"
+pharea = "Doubtful"
 phyear = 2023
 phmonth = '11'
 phserv = "Network"
