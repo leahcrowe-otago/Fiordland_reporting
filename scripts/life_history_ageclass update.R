@@ -58,7 +58,6 @@ lifehist<-lifehist%>%
     NAME == "D-20110328" ~ "2011-03-28",
     TRUE ~ LAST_DATE
   ))%>%
-  left_join(inutero, by = "NAME")%>%
   dplyr::select(POD, NAME, CODE, SEX, MOM, FIRST_CALF, BIRTH_YEAR, FIRST_YEAR, FIRST_DATE, DEATH_YEAR, LAST_YEAR, LAST_DATE, this_year_ageclass)
 
 inutero<-lifehist%>%
