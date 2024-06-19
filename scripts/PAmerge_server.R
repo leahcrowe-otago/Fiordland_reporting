@@ -22,10 +22,10 @@ observeEvent(input$photogo,{
   #print(phyear)
   #print(phfile)
  
-pharea = "Doubtful"
-phyear = 2023
-phmonth = '11'
-phserv = "Network"
+# pharea = "Other"
+# phyear = 2023
+# phmonth = '04'
+# phserv = "Network"
 
   if(pharea == "Other"){
     phareafile = 'Other Fiords/Survey data/'
@@ -85,9 +85,11 @@ phserv = "Network"
   }
   
   print("tracks")
-
+  print(head(raw_tracks))
+  
   tracks<-as.data.frame(raw_tracks)%>%
-    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE, DEVICEID)%>% #at 2022_07 LATITUDE and LONGITUDE became LAT and LON, idk
+    #rename("LATITUDE" = "LAT", "LONGITUDE" = "LON")%>%
+    dplyr::select(DATE, TIME, LATITUDE, LONGITUDE, DEVICEID)%>% #at 2022_07 & 2023_10 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
     #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
@@ -307,7 +309,7 @@ phserv = "Network"
     dplyr::rename("DATE" = "Date")%>%
     distinct(DATE, Datetime)%>%
     filter(!is.na(Datetime))%>%
-    #ungroup()%>%
+    ungroup()%>%
     mutate(Event = as.numeric(rep(1:(n()/2),each = 2)))%>%
     group_by(Event)%>%
     mutate(min = min(Datetime),
@@ -452,7 +454,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     filter(ID_Name != "CULL")
   nrow(allmerge)
   
-  #list folders that start with the year
+  # list folders that start with the year ----
   folder.list<-list.files(pathimage, pattern = paste0("^",phyear), full.names = T)
   filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$|*.CR2$", full.names = T, recursive = T))
   filenames_unlist<-unlist(filenames, use.names = F)
