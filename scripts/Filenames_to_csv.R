@@ -12,13 +12,13 @@ if (survey_area == 'Doubtful' | survey_area == 'Dusky'){
   fiord_path<-paste0('Other Fiords/',survey_area,'/')
 }
 path<-paste0("//storage.hcs-p01.otago.ac.nz/sci-marine-mammal-backup/Fiordland Bottlenose dolphin/Long Term Monitoring/",fiord_path)
-year<-2015
+year<-2007
 list.files(paste0(path,year,"/"))
-month<-'03'
+month<-'12'
 
 fullpath<-paste0(path,year,"/",year,"_",month,"/")
 folder.list<-list.files(fullpath, pattern = paste0("^",year), full.names = F)
-#folder.list<-folder.list[7:8]
+#folder.list<-folder.list[5]
 filenames<-sapply(folder.list, function (x) list.files(paste0(fullpath, x), pattern = c("*.jpg$|*.JPG$|*.NEF"), full.names = T, recursive = T))
 filenames_unlist<-unlist(filenames, use.names = F)
 length(filenames_unlist)
@@ -37,6 +37,7 @@ and<-metadata%>%
          Name = toupper(stringr::word(FileName, 3)),
          Comments = "")
   
+##### after Feb 2008
 photoperind<-metadata%>%
   mutate(FileName = str_replace(FileName, " '",""),
          Name = toupper(sub(" .*","",FileName)),
@@ -61,8 +62,37 @@ photoperind<-metadata%>%
   dplyr::select(SURVEY_AREA, TRIP, Date, Filename, DateTime, Name, Part, Group, Photographer, Comments, SourceFile, FileName, DateTimeOriginal)%>%
   arrange(DateTime, Filename)
 
-write.csv(photoperind, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'.csv'), row.names = F)
+head(photoperind)
 
+##### for 2008 and previous where code leads the filename
+photoperind<-metadata%>%
+  mutate(Name = stringr::str_sub(FileName, 7,nchar(FileName)))%>%
+  mutate(FileName = str_replace(FileName, " '",""),
+         Name = toupper(sub(" .*","",Name)),
+         Comments = case_when(
+           grepl("'", FileName) ~ "Conditional match",
+           TRUE ~ ''))%>%
+  bind_rows(and)%>%
+  mutate(Part = str_sub(FileName,-7,-7),
+         Filename = str_sub(FileName,-12, -5),
+         DateTime = ymd_hms(DateTimeOriginal),
+         Date = as.Date(ymd_hms(DateTimeOriginal)),
+         Part = case_when(
+           Part == toupper('L') ~ 'LD',
+           Part == toupper('R') ~ 'RD',
+           TRUE ~ Part
+         ))%>%
+  #dplyr::select(Filename, Date, DateTime, Name, Part, Comments)%>%
+  mutate(SURVEY_AREA = toupper(survey_area),
+         TRIP = paste0(year,"_",month), 
+         Group = '',
+         Photographer = '')%>%
+  dplyr::select(SURVEY_AREA, TRIP, Date, Filename, DateTime, Name, Part, Group, Photographer, Comments, SourceFile, FileName, DateTimeOriginal)%>%
+  arrange(DateTime, Filename)
+
+head(photoperind)
+
+write.csv(photoperind, paste0('./data/Ind_per_photo_',year,"_",month,'_',Sys.Date(),'.csv'), row.names = F)
 
 #############
 # merge exif data done in segments for a trip #####
