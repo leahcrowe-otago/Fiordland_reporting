@@ -94,8 +94,8 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
 }
 
 lifehist%>%filter(NAME == "NANCY")
-  
-
+head(lifehist_sql)  
+head(lifehist)
 TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",FIRST_CALF="varchar(4)",
              BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", FIRST_DATE="varchar(10)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", 
              LAST_DATE="varchar(10)") 
@@ -108,7 +108,8 @@ avg_primo_age_df<-lifehist%>%
   filter(!is.na(FIRST_CALF))%>%
   mutate(primo_age = as.numeric(FIRST_CALF)-as.numeric(BIRTH_YEAR))%>%
   filter(!is.na(primo_age))%>%
-  mutate(avg_primo_age = mean(primo_age))
+  mutate(avg_primo_age = mean(primo_age))%>%
+  dplyr::select(POD, NAME, FIRST_CALF, BIRTH_YEAR, INUTERO, primo_age, avg_primo_age)
 
 avg_primo_age<-unique(avg_primo_age_df$avg_primo_age)
 avg_primo_age
