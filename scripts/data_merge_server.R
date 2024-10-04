@@ -11,16 +11,13 @@ observeEvent(input$photogo,{
   
   output$finalmess<-renderText({""})
   
+# user input values ----
   phserv<-input$filepathway
   phyear<-input$photoyear
   phmonth<-input$photomonth
   pharea<-input$areainput
   ofiords<-input$otherfiord
   print(ofiords)
-  #override<-NULL
-  #print(phserv)
-  #print(phyear)
-  #print(phfile)
  
 # pharea = "Other"
 # phyear = 2023
@@ -47,13 +44,13 @@ observeEvent(input$photogo,{
   print(pathimage)
   print(input$surveydata_file)
   
-  ##########################
-  ## Sightings and tracks ##
-  ##########################
+# Survey sightings and tracks ----
+  
   print("sigs and trackline")
   
+## compile ----
   if (input$surveydata_file == "compile"){
-    
+### read in final sighting file ----  
   sigs<-read.csv(paste0(pathimage,"/Sightings/f_",phyear,"_",phmonth," CyberTracker.csv"), header = T, stringsAsFactors = F)
   sigs<-sigs%>%mutate(Datetime = dmy_hms(paste(Date, Time)))%>%
     dplyr::select(Datetime, everything())
@@ -63,6 +60,7 @@ observeEvent(input$photogo,{
   
   print("raw tracks")
   
+### option if data came from more than one device, but needs to be manually adjusted below ----
   if(pharea == "Dusky" & phyear == 2023 & phmonth == '06'){
   
     raw_tracks1<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
@@ -74,50 +72,43 @@ observeEvent(input$photogo,{
       bind_rows(as.data.frame(raw_tracks2))
     
   } else {
-    
+### read trackline shapefile ----  
     raw_tracks<-sf::st_read(paste0(pathimage,"/Tracks"), layer = paste0(phyear,"_",phmonth), quiet = T)
   
     }
-  
+  #LATITUDE VS LAT, AND LONGITUDE VS LON in earlier versions of the app
   if (phyear < 2022){
     raw_tracks<-raw_tracks%>%
       dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
   }
-  
+
   print("tracks")
   print(head(raw_tracks))
   
+  #tracks grouped by device to account for multiple platforms on same day
   tracks<-as.data.frame(raw_tracks)%>%
     #rename("LATITUDE" = "LAT", "LONGITUDE" = "LON")%>%
     dplyr::select(DATE, TIME, LATITUDE, LONGITUDE, DEVICEID)%>% #at 2022_07 & 2023_10 LATITUDE and LONGITUDE became LAT and LON, idk
     mutate(Datetime = ymd_hms(paste(DATE, TIME)))%>%
-    #filter(Datetime >= ymd_hms('2021-09-30 10:59:00') & Datetime <= ymd_hms('2021-09-30 11:20:00'))%>%
     dplyr::select(Datetime, everything())%>%
     arrange(DEVICEID, Datetime)%>%
     distinct()%>%
     group_by(DEVICEID, Datetime)%>%
-    mutate(rank = rank(Datetime, ties.method = "first"))%>%
+    mutate(rank = rank(Datetime, ties.method = "first"))%>% # removes duplicated time/position records
     filter(rank == 1)%>%
-    dplyr::select(-rank) #%>%
-    #dplyr::rename(LATITUDE = LAT, LONGITUDE = LON)
-  
-  tracks%>%
-    distinct(DATE, DEVICEID)
+    dplyr::select(-rank)
   
   tracks$Datetime<-ymd_hms(tracks$Datetime)
   
-  
-  ### August 23
-  ###
-  #find nearest position for time changes ----
-  # consider multiple tablets/devices
+  #find nearest position for time adjusted in editing
+  #considers multiple tablets/devices
   
   device<-unique(sigs$DEVICEID)
   sig_near<-NULL
   tracksrank<-NULL
   nrow(sigs)
   nrow(tracks)
-  
+#### find nearest location to times in sightings file, filter to 10 secs in the tracklines ----  
   for (i in 1:length(device)){
   
   x = device[i]
@@ -169,19 +160,19 @@ observeEvent(input$photogo,{
   
   sigs<-sig_near
   print(head(sigs))
-  #
 
+#### final survey data ----
   f_data<-tracksrank%>%
     full_join(sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time","DEVICEID"))%>%
     mutate(DATE = as.factor(DATE),
            across(where(is.character), ~na_if(., "")))%>%
     arrange(DEVICEID, Datetime)
 
-  # add missing ----
+##### add missing tracks if hacking in ----
   
   if(input$missing == "Y"){
     print("missing")
-    # add gpx files made in "gpx_hack.R" ----
+    # add gpx files made in "gpx_hack.R"
     missing_tracks<-read.csv(paste0(pathimage,"/Tracks/",phyear,"_",phmonth,"_missing.csv"), header = T, stringsAsFactors = F)
     missing_tracks$Datetime<-ymd_hms(missing_tracks$Datetime)
     missing_tracks$DATE<-ymd(missing_tracks$DATE)
@@ -191,7 +182,7 @@ observeEvent(input$photogo,{
       dplyr::select(Datetime, everything())
     
     missing_sigs$Date<-dmy(missing_sigs$Date)
-    #find nearest position for time changes ----
+    #find nearest position for time changes in editing
     
     data.table::setDT(missing_sigs)[,  Latitude := data.table::setDT(missing_tracks)[missing_sigs, LATITUDE, on = "Datetime", roll = "nearest"]]
     data.table::setDT(missing_sigs)[,  Longitude := data.table::setDT(missing_tracks)[missing_sigs, LONGITUDE, on = "Datetime", roll = "nearest"]]
@@ -209,18 +200,15 @@ observeEvent(input$photogo,{
     
     f_data_missing<-missing_tracks%>%
       full_join(missing_sigs, by = c("Datetime","LATITUDE"="Latitude","LONGITUDE"="Longitude","DATE"="Date","TIME"="Time"))%>%
-      mutate(#Datetime = as.factor(Datetime),
-             DATE = as.factor(DATE),
+      mutate(DATE = as.factor(DATE),
              across(where(is.character), ~na_if(., "")))%>%
       arrange(Datetime)
       
     f_data<-f_data%>%
       bind_rows(f_data_missing)
-    #f_data<-f_data_missing
   }
   
-  
-  #f_data%>%filter(DATE == '2021-10-21' & grepl('13:34:05',TIME))
+##### event numbers to each effort period ----
   Event<-f_data%>%filter(Effort == "Effort ON")%>%ungroup()%>%mutate(Event = 1:n())%>%as.data.frame()
   print(Event)
   print(head(f_data))
@@ -229,7 +217,6 @@ observeEvent(input$photogo,{
     filter(grepl('Effort',Effort))%>%
     distinct(DATE, Datetime, DEVICEID)%>%
     filter(!is.na(Datetime))%>%
-    #ungroup()%>%
     mutate(Event = as.numeric(rep(1:(n()/2),each = 2)))%>%
     group_by(Event)%>%
     mutate(min = min(Datetime),
@@ -257,7 +244,8 @@ observeEvent(input$photogo,{
   print(f_data%>%
           filter(grepl("Encounter", Event_Type))%>%
           arrange(DEVICEID, Datetime))
-  
+
+##### sighting numbers for encounter events ----    
   sig_num<-f_data%>%
     filter(grepl("Encounter", Event_Type))%>%
     arrange(DEVICEID, Datetime)%>%
@@ -287,16 +275,19 @@ observeEvent(input$photogo,{
   
   f_data$Platform<-zoo::na.locf(f_data$Platform, na.rm = FALSE)
   
+#### write final survey data file ----  
   write.csv(f_data, paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), row.names = F, na = "")
   write.csv(f_data%>%filter(!is.na(Tawaki))%>%dplyr::select(Datetime, Date, Time, Latitude, Longitude,Tawaki,Note), paste0(pathimage,"/Tawaki_",phyear,"_",phmonth,"_",".csv"), row.names = F, na = "")
+  
   } else {
+## load survey file ----
+    
   print("load")
   f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = F)
   head(f_data)
   f_data[f_data == ''] <- NA
   
-  #f_data$Datetime<-dmy_hms(f_data$Datetime)
-  
+##### sighting numbers for encounter events ----   
   sig_num<-f_data%>%
     filter(grepl("Encounter", Event_Type))%>%
     arrange(desc(Datetime))%>%
@@ -304,6 +295,7 @@ observeEvent(input$photogo,{
   
   print(sig_num%>%as.data.frame())
   
+##### event numbers to each effort period ----
   onoffeffort<-f_data%>%
     filter(grepl('Effort',Effort))%>%
     dplyr::rename("DATE" = "Date")%>%
@@ -320,6 +312,7 @@ observeEvent(input$photogo,{
   
   }
   
+## report data ----  
   sig_count<-max(f_data$Sighting_Number, na.rm = T)
   
   sig_days<-sig_num%>%
@@ -328,12 +321,14 @@ observeEvent(input$photogo,{
   print(nrow(f_data))
 
   incProgress(3/5)
-  #convert meters to nm
+  #convert meters to nautical miles
   m_nm<-1/1852
   
   #2022_07 Dusky mess
   #f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,"_lowercase.csv"), header = T, stringsAsFactors = F)
-  
+
+### nautical miles on effort calculation
+  #finding only trackline effort within the complexes (predominantly)
   if (pharea == "Dusky"){
     latmin = -45.82
     latmax = -45.48
@@ -346,9 +341,7 @@ observeEvent(input$photogo,{
     latmin = min(f_data$Latitude)
     latmax = max(f_data$Latitude)
     print(head(f_data))
-
   }
-  
   
   f_data_dist<-f_data%>%
     filter(Latitude >= latmin & Latitude <= latmax)%>%
@@ -356,9 +349,8 @@ observeEvent(input$photogo,{
     group_by(Date,Event)%>%
     mutate(LAT2 = dplyr::lag(Latitude),
            LON2 = dplyr::lag(Longitude),
-           #is the below really distance in nm?
            dist_km = geosphere::distVincentyEllipsoid(matrix(c(Longitude,Latitude), ncol = 2),matrix(c(LON2, LAT2), ncol =2),a=6378137, f=1/298.257222101)*m_nm)
-  
+  #finding only trackline effort within specified areas, needs manually adjusted
   if (pharea == "Other"){
     
     latmin = -45.82
@@ -374,7 +366,7 @@ observeEvent(input$photogo,{
   print(f_data_dist%>%filter(dist_km > 0.1)%>%as.data.frame())
   track_dist<-round(sum(f_data_dist$dist_km, na.rm=TRUE),0)
   
-  #order events in ascending order for Last Observation Carried Forward
+  ## order events in ascending order for Last Observation Carried Forward ----
   sig_num$Permit[sig_num$Permit==""] <- NA
   sig_num$Encounter_Type[sig_num$Encounter_Type==""] <- NA
   
@@ -392,7 +384,7 @@ observeEvent(input$photogo,{
     as.data.frame()
   
   unique(onoffsigs$Permit)
-  
+  ### hours with dolphins by permit and distance type ----
   hours_wTt<-onoffsigs%>%
     filter(Species == "Bottlenose")%>%
     group_by(Encounter_Type, Permit)%>%
@@ -413,9 +405,8 @@ observeEvent(input$photogo,{
   
   print(hours_wTt)
   
-  ####################
-  ## Photo analysis ##
-  ####################
+  
+  ## Photo analysis ----
   
   if (dir.exists(pathimage) == FALSE){
     output$error<-renderText({"Double check 'Year', 'Month', and 'Area monitored' -- files cannot be found."})
@@ -431,8 +422,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   Tt_ID<-"yes"
   
   if (input$EXIF == "collect"){  
+## if collecting timestamps, merging all PA files, gathering list of photographs, and gathering timestamps ----  
     print("merging PA")
-  ##merge all PA excel spreadsheets
+  ### merge all PA excel spreadsheets ----
   PA_xlsx<-list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx", full.names = T, all.files = F)
   #exclude weird hidden excel files
   PA_xlsx<-grep(PA_xlsx, pattern = "[~]", invert = T, value = T)
@@ -440,8 +432,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   head(PA_xlsx[1])
   
   PA_merge<-lapply(PA_xlsx, function (x) readxl::read_excel(x, sheet = 1, col_names = T, guess_max = 1000, range = cellranger::cell_cols("A:G")))
-  #nrow(PA_merge[[2]])
-  #nrow(PA_merge[[2]])
+ 
   allmerge<-do.call(rbind, PA_merge)
   head(allmerge)
   nrow(allmerge)
@@ -454,7 +445,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     filter(ID_Name != "CULL")
   nrow(allmerge)
   
-  # list folders that start with the year ----
+  #### list folders that start with the year ----
   folder.list<-list.files(pathimage, pattern = paste0("^",phyear), full.names = T)
   filenames<-sapply(folder.list, function (x) list.files(x, pattern = "*.JPG$|*.jpg$|*.CR2$", full.names = T, recursive = T))
   filenames_unlist<-unlist(filenames, use.names = F)
@@ -465,21 +456,6 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   head(allphotod_df)
   nrow(allphotod_df)
   
-  #allphotod_df%>%filter(grepl('DSC',filename))
-  
-  #those without filenames
-
-  # PA_fn_error<-allphotod_df%>%
-  #   right_join(allmerge, by = c("filename" = "Filename", "date" = "Date"))%>%
-  #   filter(is.na(fullfilename))
-  # nrow(PA_fn_error)
-  # 
-  # if (nrow(PA_fn_error) > 0){
-  #   #return an error message before proceeding
-  #   #and print the table
-  # }
-  
-#allmerge%>%filter(Date == '2021-10-02')%>%filter(Filename == 'DSC_3171')
   nrow(allmerge)
   print(nrow(allphotod_df))
   files_for_exif<-allphotod_df%>%
@@ -490,7 +466,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   print(nrow(files_for_exif))
   incProgress(1/5)
   print("getting exif data")
-  #get exif data
+  ### get exif data ----
   #http://web.mit.edu/graphics/src/Image-ExifTool-6.99/html/install.html
   #https://strawberryperl.com/
   metadata<-exifr::read_exif(files_for_exif$fullfilename, tags = c("filename", "DateTimeOriginal"))
@@ -503,6 +479,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     dplyr::select(Filename, Datetime, Date)
   nrow(metadata2)
   
+  ### final file ----
   allmerge_dt<-allmerge%>%
     left_join(metadata2, by = c("Filename", "Date"))%>%
     mutate(ID_Name = case_when(grepl("EEK", ID_Name) ~ "EEK-THE-CAT",
@@ -521,6 +498,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   incProgress(2/5)
   
   } else if (input$EXIF == "load"){
+### if loading a final PA file ----
     incProgress(2/5)
     print("load exif")
     allmerge_dt<-read.csv(paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), header = T, stringsAsFactors = T)
@@ -549,7 +527,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     allmerge_dt<-allmerge_dt%>%dplyr::select(-Group)
     }
     
-   #add group based on time of photo compared with sighting time
+#add group based on time of photo compared with sighting time ----
     allmerge_dt$Date<-ymd(allmerge_dt$Date)
     
     allmerge_dt_group<-allmerge_dt%>%
@@ -577,27 +555,22 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     
     print(nrow(allmerge_group))
     
-    # allmerge_group<-allmerge_dt%>%
-    #   mutate(GGroup = 1)
-    # 
+# write final file ----
     write.csv(allmerge_group, paste0(pathimage,"/Photo analysis/f_PA_",phyear,"_",phmonth,".csv"), row.names = F, na = "")  
 
     recent<-format(max(sigminmax$Date) - lubridate::years(1), "%d %b %Y")
     older<-format(max(sigminmax$Date) - lubridate::years(2), "%d %b %Y")
     print(recent)
     print(older)
-  ##################
-  ## life history ##
-  ##################
+    
+  ## life history ----
   
-  #fiordland_bottlenose.life_history_ageclass
   #source('./scripts/connect to MySQL.R', local = TRUE)$value
   source('./scripts/life_history_ageclass update.R', local = TRUE)$value
-  #lifehist<-dbReadTable(con, "life_history_ageclass")
+  # made in "life_history_ageclass.R" script
   head(lifehist)
   #print(lifehist)
   #phyear gets updated to calf year in the "life_history_ageclass.R" run
-  #phyear<-2023
   print(phyear)
   lhyear = phyear
   
@@ -616,14 +589,15 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   }
   
   names(lifehist)[length(names(lifehist))]<-"AgeClass" 
-  
+  # number of photos for report
   photo_counts<-allmerge_dt%>%
     filter(!grepl("\\?",ID_Name))%>%
     filter(ID_Name != "CALF")%>%
     group_by(Date, ID_Name)%>%
     tally()
   
-  print('356')
+  print('599')
+  # demographic summaries of sighted dolphins for report
   daily_cap<-photo_counts%>%
     ungroup()%>%
     mutate_if(is.numeric, ~1 * (. > 0))%>%
@@ -635,8 +609,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   
   trip_cap<-daily_cap%>%
     distinct(NAME,SEX,AgeClass)
-  trip_cap%>%filter(is.na(AgeClass))%>%as.data.frame()
-  print('369')
+  
+  print(trip_cap%>%filter(is.na(AgeClass))%>%as.data.frame())
+  
   age_sex_table<-trip_cap%>%
     dplyr::select(-NAME)%>%
     group_by(SEX, AgeClass)%>%
@@ -644,7 +619,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     tidyr::pivot_wider(names_from = SEX, values_from = n)%>%
     arrange(factor(AgeClass, levels = c("A","S-A","J","C","U")))%>%
     replace(is.na(.), 0)
-  
+ 
   age_class_abbr<-function(x) {
     x %>%
     mutate(AgeClass = case_when(
@@ -656,7 +631,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
         ))}
     
   age_sex_table<-age_class_abbr(age_sex_table)
-  
+
   if (!"M" %in% colnames(age_sex_table)){
     age_sex_table<-age_sex_table%>%
       mutate(M = 0)}
@@ -669,6 +644,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
     age_sex_table<-age_sex_table%>%
       mutate(X = 0)}
   
+  print('647')
   allsampledays<-f_data%>%
     distinct(Date)%>%
     mutate(value = 0)%>%
@@ -701,18 +677,13 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   }
   
   disco_data<-disco(daily_cap)
-  
-  #onoffeffort$DATE<-ymd(onoffeffort$DATE)
-  disco_data$date<-ymd(disco_data$date)
-  
-  #disco_data<-disco_data%>%
-   # left_join(onoffeffort, by = c('date' = 'DATE'))%>%
-   #dplyr::select(-min, -max, Event)
+  print('680')
 
+  disco_data$date<-ymd(disco_data$date)
+
+  # discovery curve
     disco_curve<-ggplot(disco_data, aes(x=date, y = disc))+
     geom_line()+
-    #geom_col(mapping = aes(x = date, y = ni, color = Permit), alpha = 0.5)+
-    #geom_point(alpha = 0.8, size = 3, mapping = aes(color = Permit))+
     geom_col(mapping = aes(x = date, y = ni), alpha = 0.5)+
     geom_point(alpha = 0.8, size = 3)+
     theme_bw()+
@@ -725,18 +696,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   
   ggsave(filename = 'disco_curve.png',disco_curve,device = 'png', './figures', dpi = 320, width = 120, height = 80, units = 'mm')
   
-  #######################
-  ## Sightings history ##
-  #######################
-  
-  #this section is a place holder until the database is complete
-  ##Capture history from Excel spreadsheet##
-  
-  # if (pharea == 'Dusky'){
-  # caphist<-read.csv('./data/Dusky date capture history 2007-2021.csv', header = T, stringsAsFactors = F)
-  # } else if (pharea == 'Doubtful'){
-  # caphist<-read.csv('./data/Doubtful date capture history 1990-Jan2021.csv', header = T, stringsAsFactors = F)
-  # }
+# Sightings history ----
   
   thistrip<-daily_cap%>%
     dplyr::select(-SEX, -BIRTH_YEAR, -FIRST_YEAR, -AgeClass)%>%
@@ -746,23 +706,7 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   
   thistrip_names<-thistrip%>%distinct(NAME)%>%as.data.frame()
   
-  print('365')
-  # all_first_last<-caphist%>%
-  #   tidyr::pivot_longer(!(c(Entry,NAME)),names_to = "Date")%>%
-  #   filter(value != 0)%>%
-  #   mutate(Date = lubridate::dmy(substr(str_replace_all(Date,"\\.","-"),2,9)))%>%
-  #   dplyr::select(NAME, Date, value)%>%
-  #   bind_rows(thistrip)%>%
-  #   group_by(NAME)%>%
-  #   mutate(first_date = min(Date),
-  #          last_date = max(Date),
-  #          NAME = toupper(NAME))%>%
-  #   distinct(NAME,first_date,last_date)%>%
-  #   filter(!is.na(NAME))%>%
-  #   arrange(NAME)%>%
-  #   dplyr::left_join(lifehist, by = "NAME")
-  
-  print(lifehist)
+  print('709')
   
   unseen_two_years<-lifehist%>%
     anti_join(thistrip_names)%>%
@@ -773,7 +717,6 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
       nchar(NAME) <= 2 ~ paste0(NAME," (",SEX,")")))
   
   unseen_names<-unseen_two_years$NAME
-  print("392")
   
   unseen_table<-unseen_two_years%>%
     group_by(LAST_YEAR, SEX, AgeClass)%>%
@@ -804,12 +747,9 @@ if (identical(list.files(paste0(pathimage,"/Photo analysis"), pattern = "*.xlsx"
   Tt_ID<-"no"
 }
     
-  #########
-  ## MAP ##
-  #########
-  
+# maps ----
+
 NZ_coast<-sf::read_sf(dsn = "./shapefiles", layer = "nz-coastlines-and-islands-polygons-topo-1500k")
-#NZ_coast<-as.data.frame(st_coordinates(NZ_coast))
   
 incProgress(4/5)
 
@@ -849,8 +789,6 @@ f_data%>%filter(!is.na(Encounter_Type))
 
 sigmap<-ggplot()+
   geom_sf(data = NZ_coast, alpha = 0.9, fill = "grey")+
-  #geom_polygon(NZ_coast, mapping = aes(X,Y,group = L2), alpha = 0.8)+
-  #path
   geom_point(f_data%>%filter(!is.na(Encounter_Type) | Event_Type == 'Encounter END & DATA'), mapping = aes(Longitude, Latitude, color = Date), size = 0.1)+
   #start point
   geom_point(f_data%>%filter(Event_Type == 'Encounter START' & Encounter_Type == 'Initial'), mapping = aes(Longitude, Latitude, color = Date, shape = Species), fill = "red", size = 1.5, stroke = 1.5)+
@@ -908,7 +846,6 @@ sigmap<-sigmap+theme(legend.position = "none")
   
   }
   
-  #map<-ggpubr::ggarrange(effmap, sigmap, legend = "right", widths = c(w1,1), labels = 'auto')
   map<-cowplot::plot_grid(effmap, sigmap, labels = "auto", rel_widths = c(1.13,1))
   legend<-cowplot::plot_grid(legend, ncol = 1, rel_heights = c(.1))
   legend_sig<-cowplot::plot_grid(legend_sig, ncol = 1, rel_heights = c(.1))
@@ -916,10 +853,12 @@ sigmap<-sigmap+theme(legend.position = "none")
   ggsave(filename = 'map.png',map,device = 'png', './figures', dpi = 320, width = 169, height = 115, units = 'mm')
   ggsave(filename = 'legend.png',legend,device = 'png', './figures', dpi = 320, width = 169, height = 10, units = 'mm')
   ggsave(filename = 'legend_sig.png',legend_sig,device = 'png', './figures', dpi = 320, width = 75, height = 30, units = 'mm')
-  incProgress(5/5)
+ 
+ incProgress(5/5)
  print("Done")
  enable("report")
 
+ # download report ----
  output$report<-downloadHandler(
    
    filename = paste0(pharea,"_FBD_monitoring_report_",phyear,"_",phmonth,".pdf"),
