@@ -324,9 +324,6 @@ observeEvent(input$photogo,{
   #convert meters to nautical miles
   m_nm<-1/1852
   
-  #2022_07 Dusky mess
-  #f_data<-read.csv(paste0(pathimage,"/f_data_",phyear,"_",phmonth,"_lowercase.csv"), header = T, stringsAsFactors = F)
-
 ### nautical miles on effort calculation
   #finding only trackline effort within the complexes (predominantly)
   if (pharea == "Dusky"){
