@@ -401,6 +401,9 @@ timeline_data<-datalog%>%filter(Year >=2004)%>%filter(Fiord == "DUSKY" | Fiord =
          ),
          sep_start = Ordinal - 244)
 
+library(viridis)
+col_pal<-viridis(4)
+
 timeline<-ggplot(timeline_data)+
   geom_point(aes(x = Ordinal, y = as.factor(Year), group = tripid), shape = "square")+
   geom_path(aes(x = Ordinal, y = as.factor(Year), group = tripid), linewidth = 1.85)+
@@ -409,15 +412,15 @@ timeline<-ggplot(timeline_data)+
   scale_x_continuous(breaks = c(1,32,60,91,121,152,182,213,244,274,305,335,366),
                      labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec",""), limits = c(1,366))+
   annotate("rect", xmin = 60, xmax = 151, ymin = as.factor(2004), ymax = as.factor(2023),
-           alpha = .1,fill = "yellow")+
+           alpha = .2,fill = "orange")+
   annotate("rect", xmin = 152, xmax = 243, ymin = as.factor(2004), ymax = as.factor(2023),
-           alpha = .1,fill = "green")+
+           alpha = .2,fill = "darkblue")+
   annotate("rect", xmin = 244, xmax = 334, ymin = as.factor(2004), ymax = as.factor(2023),
-           alpha = .1,fill = "red")+
+           alpha = .2,fill = "green")+
   annotate("rect", xmin = 335, xmax = 366, ymin = as.factor(2004), ymax = as.factor(2023),
-           alpha = .1,fill = "orange")+
+           alpha = .2,fill = "red")+
   annotate("rect", xmin = 1, xmax = 59, ymin = as.factor(2004), ymax = as.factor(2023),
-           alpha = .1,fill = "orange")+
+           alpha = .2,fill = "red")+
   #scale_y_continuous(breaks = seq(min(data$Year), max(data$Year), by = 1))+
   theme_bw()+
   xlab("")+
