@@ -310,19 +310,19 @@ saveRDS(comp, paste0("./data/tally_", Sys.Date(),".rds"))
 
 ggplot(yeartally%>%filter(!(POD == "DUSKY" & CALFYEAR == 2007)))+
   geom_col(data = photo_n, mapping = aes(x = CALFYEAR, y = n/100, fill = POD), alpha = 0.4)+
-  geom_line(cap_ng_tally%>%filter(!(POD == "DUSKY" & CALFYEAR <= 2007)), mapping = aes(x = as.numeric(CALFYEAR), y = sum, color = POD))+
-  geom_point(cap_ng_tally%>%filter(!(POD == "DUSKY" & CALFYEAR <= 2007)), mapping = aes(x = as.numeric(CALFYEAR), y = sum, color = POD), size = 3)+
+  geom_line(cap_ng_tally%>%filter(!(POD == "DUSKY" & CALFYEAR <= 2007)), mapping = aes(x = as.numeric(CALFYEAR), y = calfyear_ng, color = POD))+
+  geom_point(cap_ng_tally%>%filter(!(POD == "DUSKY" & CALFYEAR <= 2007)), mapping = aes(x = as.numeric(CALFYEAR), y = calfyear_ng, color = POD), size = 3)+
   geom_line(aes(x = CALFYEAR, y = calfyear), color = "black", linetype = "dashed")+
   geom_point(aes(x = CALFYEAR, y = calfyear), color = "black")+
   #geom_line(adults_calfyear, mapping = aes(x = CALFYEAR, y = n, color = POD), linetype = "dashed")+
   #geom_point(adults_calfyear, mapping = aes(x = CALFYEAR, y = n, color = POD))+
-  facet_wrap(~POD)+
+  facet_wrap(~POD, ncol = 1)+
   theme_bw()+
   theme(legend.position ="none")+
   xlab("Year")+
   scale_y_continuous(name = "# individuals identified", sec.axis = sec_axis(~.*100, name = "# photographs"))
 
-ggsave('./figures/observed_photos.png', dpi = 600, width = 250, height = 150, units = 'mm')
+ggsave('./figures/observed_photos.png', dpi = 600, width = 175, height = 250, units = 'mm')
 
 photo_n%>%
   group_by(POD)%>%
