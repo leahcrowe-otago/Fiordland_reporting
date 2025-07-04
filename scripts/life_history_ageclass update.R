@@ -35,14 +35,10 @@ phyear_lh = min(lifehist_sql$FIRST_YEAR)
 print(phyear_lh)
 
 mom_first_year<-lifehist_sql%>%filter(MOM != "")%>%group_by(MOM)%>%dplyr::summarise(FIRST_CALF = min(BIRTH_YEAR))
-lifehist_sql%>%filter(MOM == "ARROW")%>%group_by(MOM)%>%dplyr::summarise(FIRST_CALF = min(BIRTH_YEAR))
+
 lifehist_sql<-lifehist_sql%>%left_join(mom_first_year, by = c("NAME" = "MOM"))
 lifehist<-assign_ageclass(lifehist_sql)
 lifehist$DEATH_YEAR[lifehist$DEATH_YEAR==""] <- NA
-
-lifehist%>%filter(NAME == "D-20220115")
-lifehist%>%filter(NAME == "NANCY")
-lifehist%>%filter(NAME == "CORKSCREW")
 
 lifehist<-lifehist%>%
   mutate(POD = case_when(
@@ -93,28 +89,19 @@ for(i in (min(as.numeric(lifehist$FIRST_YEAR))+1):year(Sys.Date())){
   lifehist
 }
 
-lifehist%>%filter(NAME == "NANCY")
-head(lifehist_sql)  
-head(lifehist)
-TYPES = list(POD="varchar(20)", NAME="varchar(45)", CODE="varchar(10)", SEX="varchar(5)",MOM="varchar(45)",FIRST_CALF="varchar(4)",
-             BIRTH_YEAR="varchar(4)", FIRST_YEAR="varchar(4)", FIRST_DATE="varchar(10)", DEATH_YEAR="varchar(4)", LAST_YEAR="varchar(4)", 
-             LAST_DATE="varchar(10)") 
-
-#lifehist_sql<-dbWriteTable(con, name = "life_history_ageclass", value = lifehist, field.types = TYPES, row.names = FALSE, overwrite = T)
-
 ##once last_year is integrated, need to make some changes to the above so age class is only populated between birth/first and last  
 
 avg_primo_age_df<-lifehist%>%
   filter(!is.na(FIRST_CALF))%>%
   mutate(primo_age = as.numeric(FIRST_CALF)-as.numeric(BIRTH_YEAR))%>%
   filter(!is.na(primo_age))%>%
-  mutate(avg_primo_age = mean(primo_age))%>%
-  dplyr::select(POD, NAME, FIRST_CALF, BIRTH_YEAR, INUTERO, primo_age, avg_primo_age)
+  mutate(avg_primo_age = mean(primo_age),
+         min_primo_age = min(primo_age),
+         max_primo_age = max(primo_age))%>%
+  dplyr::select(POD, NAME, FIRST_CALF, BIRTH_YEAR, INUTERO, primo_age, avg_primo_age, min_primo_age, max_primo_age)
 
 avg_primo_age<-unique(avg_primo_age_df$avg_primo_age)
 avg_primo_age
 
 dbDisconnect(con)
 
-
-  
